@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FolderOpen, Upload, Activity } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Upload, Activity, Server } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -19,9 +19,7 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-[260px] flex-col border-r border-zinc-800/40 bg-[#0a0b0f]">
       <div className="flex items-center gap-3 px-6 pb-6 pt-7">
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/10 ring-1 ring-emerald-500/20">
-          <span className="font-mono text-[11px] font-bold text-emerald-400">
-            LV
-          </span>
+          <Server className="h-3.5 w-3.5 text-emerald-400" />
         </div>
         <div className="flex flex-col">
           <span className="font-mono text-[13px] font-semibold tracking-wide text-zinc-200">
