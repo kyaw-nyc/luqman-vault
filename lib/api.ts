@@ -48,3 +48,51 @@ export async function getHealth(): Promise<HealthItem[]> {
 export async function getSystemInfo(): Promise<SystemInfo> {
   return fetchApi("/api/system", mockSystemInfo);
 }
+
+export function uploadFile(
+  file: File,
+  targetPath: string,
+  onProgress: (pct: number) => void,
+): Promise<void> {
+  if (USE_MOCK) {
+    // Simulate upload in mock mode
+    return new Promise((resolve) => {
+      let pct = 0;
+      const tick = setInterval(() => {
+        pct = Math.min(pct + 12, 100);
+        onProgress(pct);
+        if (pct === 100) {
+          clearInterval(tick);
+          resolve();
+        }
+      }, 80);
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("path", targetPath);
+
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`Upload failed: ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error("Upload failed"));
+
+    xhr.open("POST", `${API_BASE}/api/upload`);
+    xhr.send(form);
+  });
+}

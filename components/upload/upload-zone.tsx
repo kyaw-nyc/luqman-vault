@@ -6,11 +6,13 @@ import {
   File,
   X,
   CheckCircle,
+  AlertCircle,
   Loader2,
   FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/formatters";
+import { uploadFile } from "@/lib/api";
 
 interface UploadFile {
   id: string;
@@ -59,34 +61,33 @@ export function UploadZone() {
     setFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
-  const simulateUpload = async () => {
+  const runUpload = async () => {
     setIsUploading(true);
     const pending = files.filter((f) => f.status === "pending");
 
-    for (const uploadFile of pending) {
+    for (const item of pending) {
       setFiles((prev) =>
-        prev.map((f) =>
-          f.id === uploadFile.id ? { ...f, status: "uploading" } : f,
-        ),
+        prev.map((f) => (f.id === item.id ? { ...f, status: "uploading" } : f)),
       );
 
-      for (let progress = 0; progress <= 100; progress += 8) {
-        await new Promise((r) => setTimeout(r, 80));
+      try {
+        await uploadFile(item.file, targetFolder, (pct) => {
+          setFiles((prev) =>
+            prev.map((f) => (f.id === item.id ? { ...f, progress: pct } : f)),
+          );
+        });
         setFiles((prev) =>
           prev.map((f) =>
-            f.id === uploadFile.id ? { ...f, progress } : f,
+            f.id === item.id ? { ...f, status: "complete", progress: 100 } : f,
           ),
         );
+      } catch {
+        setFiles((prev) =>
+          prev.map((f) => (f.id === item.id ? { ...f, status: "error" } : f)),
+        );
       }
-
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.id === uploadFile.id
-            ? { ...f, status: "complete", progress: 100 }
-            : f,
-        ),
-      );
     }
+
     setIsUploading(false);
   };
 
@@ -170,7 +171,7 @@ export function UploadZone() {
             </p>
             {pendingCount > 0 && (
               <button
-                onClick={simulateUpload}
+                onClick={runUpload}
                 disabled={isUploading}
                 className="rounded-md bg-emerald-500/90 px-4 py-1.5 text-[13px] font-medium text-zinc-950 transition-all hover:bg-emerald-400 disabled:opacity-40"
               >
@@ -192,6 +193,8 @@ export function UploadZone() {
                     <CheckCircle className="h-4 w-4 text-emerald-400/80" />
                   ) : uploadFile.status === "uploading" ? (
                     <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                  ) : uploadFile.status === "error" ? (
+                    <AlertCircle className="h-4 w-4 text-red-400/80" />
                   ) : (
                     <File className="h-4 w-4 text-zinc-600" />
                   )}
@@ -220,6 +223,12 @@ export function UploadZone() {
                 {uploadFile.status === "complete" && (
                   <span className="font-mono text-[11px] text-emerald-500/70">
                     done
+                  </span>
+                )}
+
+                {uploadFile.status === "error" && (
+                  <span className="font-mono text-[11px] text-red-400/70">
+                    failed
                   </span>
                 )}
 

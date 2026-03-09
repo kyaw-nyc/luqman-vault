@@ -1,21 +1,24 @@
 import mimetypes
+import os
 import shutil
 import socket
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 STORAGE_ROOT = Path("/home/luqman/Storage").resolve()
+ACTIVITY_SCAN_DEPTH = 3
+ACTIVITY_LIMIT = 20
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # fine — this is private/Tailscale only
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -27,6 +30,18 @@ SERVICES = [
     ("sshd", "ssh"),
     ("ae1200-fix.service", "ae1200-fix.service"),
 ]
+
+
+def resolve_safe_path(path: str) -> Path:
+    """Resolve a client path to an absolute path inside STORAGE_ROOT.
+    Raises 400 if the resolved path escapes the storage root."""
+    clean = Path(path.lstrip("/"))
+    resolved = (STORAGE_ROOT / clean).resolve()
+
+    if not str(resolved).startswith(str(STORAGE_ROOT)):
+        raise HTTPException(status_code=400, detail="Invalid path")
+
+    return resolved
 
 
 @app.get("/api/stats")
@@ -63,7 +78,6 @@ def get_health():
                 status = "stopped"
                 details = f"{display_name} is stopped"
             else:
-                # failed, activating, deactivating, etc.
                 status = "error"
                 details = f"{display_name} state: {state}"
         except Exception as e:
@@ -93,18 +107,6 @@ def get_system():
         "uptime": uptime_str,
         "backendReachable": True,
     }
-
-
-def resolve_safe_path(path: str) -> Path:
-    """Resolve a client path to an absolute path inside STORAGE_ROOT.
-    Raises 400 if the resolved path escapes the storage root."""
-    clean = Path(path.lstrip("/"))
-    resolved = (STORAGE_ROOT / clean).resolve()
-
-    if not str(resolved).startswith(str(STORAGE_ROOT)):
-        raise HTTPException(status_code=400, detail="Invalid path")
-
-    return resolved
 
 
 @app.get("/api/files")
@@ -138,3 +140,59 @@ def get_files(path: str = Query(default="/")):
         })
 
     return items
+
+
+@app.get("/api/activity")
+def get_activity():
+    items = []
+
+    for root, dirs, files in os.walk(STORAGE_ROOT):
+        depth = len(Path(root).relative_to(STORAGE_ROOT).parts)
+        if depth >= ACTIVITY_SCAN_DEPTH:
+            dirs.clear()  # don't recurse deeper
+
+        for fname in files:
+            fpath = Path(root) / fname
+            try:
+                stat = fpath.stat()
+                relative = "/" + str(fpath.relative_to(STORAGE_ROOT))
+                items.append({
+                    "fileName": fname,
+                    "action": "modified",
+                    "path": relative,
+                    "timestamp": datetime.fromtimestamp(
+                        stat.st_mtime, tz=timezone.utc
+                    ).isoformat(),
+                })
+            except OSError:
+                continue
+
+    items.sort(key=lambda x: x["timestamp"], reverse=True)
+    return items[:ACTIVITY_LIMIT]
+
+
+@app.post("/api/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    path: str = Form(default="/"),
+):
+    target_dir = resolve_safe_path(path)
+
+    if not target_dir.exists():
+        raise HTTPException(status_code=404, detail="Target folder not found")
+    if not target_dir.is_dir():
+        raise HTTPException(status_code=400, detail="Target path is not a directory")
+
+    # Strip any path components from the filename — only the bare name is allowed
+    filename = Path(file.filename or "upload").name
+    if not filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    dest = target_dir / filename
+
+    with open(dest, "wb") as f:
+        while chunk := await file.read(1024 * 1024):  # stream in 1 MB chunks
+            f.write(chunk)
+
+    relative = "/" + str(dest.relative_to(STORAGE_ROOT))
+    return {"path": relative, "size": dest.stat().st_size}
