@@ -200,7 +200,7 @@ def get_activity():
 
 
 @app.get("/api/download")
-def download_file(path: str = Query(...)):
+def download_file(path: str = Query(...), inline: bool = Query(default=False)):
     target = resolve_safe_path(path)
 
     if not target.exists():
@@ -208,7 +208,33 @@ def download_file(path: str = Query(...)):
     if target.is_dir():
         raise HTTPException(status_code=400, detail="Cannot download a directory")
 
+    if inline:
+        mime = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+        return FileResponse(path=target, media_type=mime)
+
     return FileResponse(path=target, filename=target.name, media_type="application/octet-stream")
+
+
+@app.get("/api/preview")
+def preview_file(path: str = Query(...)):
+    target = resolve_safe_path(path)
+
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    if target.is_dir():
+        raise HTTPException(status_code=400, detail="Cannot preview a directory")
+
+    MAX_BYTES = 512 * 1024  # 512 KB
+    size = target.stat().st_size
+    truncated = size > MAX_BYTES
+
+    try:
+        with open(target, "r", encoding="utf-8", errors="replace") as f:
+            content = f.read(MAX_BYTES)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Cannot read file as text")
+
+    return {"content": content, "truncated": truncated, "size": size}
 
 
 # ── Write endpoints ──────────────────────────────────────────────────────────
