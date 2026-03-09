@@ -8,6 +8,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 STORAGE_ROOT = Path("/home/luqman/Storage").resolve()
 ACTIVITY_SCAN_DEPTH = 3
@@ -169,6 +170,18 @@ def get_activity():
 
     items.sort(key=lambda x: x["timestamp"], reverse=True)
     return items[:ACTIVITY_LIMIT]
+
+
+@app.get("/api/download")
+def download_file(path: str = Query(...)):
+    target = resolve_safe_path(path)
+
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    if target.is_dir():
+        raise HTTPException(status_code=400, detail="Cannot download a directory")
+
+    return FileResponse(path=target, filename=target.name, media_type="application/octet-stream")
 
 
 @app.post("/api/upload")
