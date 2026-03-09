@@ -8,16 +8,16 @@ import {
   mockHealth,
   mockSystemInfo,
 } from "./mock-data";
+import { BACKEND_URL } from "./backend";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://luqman-server:3001";
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== "false";
+// Server-side mock toggle — does not leak to the browser
+const USE_MOCK = process.env.USE_MOCK !== "false";
 
 async function fetchApi<T>(endpoint: string, fallback: T): Promise<T> {
   if (USE_MOCK) return fallback;
 
   try {
-    const res = await fetch(`${API_BASE}${endpoint}`);
+    const res = await fetch(`${BACKEND_URL}${endpoint}`);
     if (!res.ok) throw new Error(`API error: ${res.status}`);
     return res.json();
   } catch {
@@ -49,26 +49,13 @@ export async function getSystemInfo(): Promise<SystemInfo> {
   return fetchApi("/api/system", mockSystemInfo);
 }
 
+// Called from a client component — uses a relative URL so the browser
+// never touches the backend directly.
 export function uploadFile(
   file: File,
   targetPath: string,
   onProgress: (pct: number) => void,
 ): Promise<void> {
-  if (USE_MOCK) {
-    // Simulate upload in mock mode
-    return new Promise((resolve) => {
-      let pct = 0;
-      const tick = setInterval(() => {
-        pct = Math.min(pct + 12, 100);
-        onProgress(pct);
-        if (pct === 100) {
-          clearInterval(tick);
-          resolve();
-        }
-      }, 80);
-    });
-  }
-
   return new Promise((resolve, reject) => {
     const form = new FormData();
     form.append("file", file);
@@ -92,7 +79,7 @@ export function uploadFile(
 
     xhr.onerror = () => reject(new Error("Upload failed"));
 
-    xhr.open("POST", `${API_BASE}/api/upload`);
+    xhr.open("POST", "/api/upload");
     xhr.send(form);
   });
 }

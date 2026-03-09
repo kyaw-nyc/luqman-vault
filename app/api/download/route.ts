@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://luqman-server:3001";
+import { BACKEND_URL } from "@/lib/backend";
 
 export async function GET(req: NextRequest) {
   const path = req.nextUrl.searchParams.get("path");
@@ -10,7 +9,7 @@ export async function GET(req: NextRequest) {
   }
 
   const upstream = await fetch(
-    `${API_BASE}/api/download?path=${encodeURIComponent(path)}`,
+    `${BACKEND_URL}/api/download?path=${encodeURIComponent(path)}`,
   );
 
   if (!upstream.ok) {
