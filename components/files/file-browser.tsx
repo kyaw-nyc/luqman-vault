@@ -102,7 +102,6 @@ export function FileBrowser({
                     <a
                       href={`${apiBase}/api/download?path=${encodeURIComponent(file.path)}`}
                       download={file.name}
-                      onClick={(e) => e.stopPropagation()}
                       className="inline-flex rounded-md p-1.5 text-zinc-700 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-800/50 hover:text-zinc-400"
                     >
                       <Download className="h-3.5 w-3.5" />
