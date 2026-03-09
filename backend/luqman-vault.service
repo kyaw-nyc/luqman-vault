@@ -4,10 +4,14 @@ After=network.target
 
 [Service]
 User=luqman
+Group=luqman
 WorkingDirectory=/home/luqman/luqman-vault/backend
 ExecStart=/home/luqman/luqman-vault/backend/venv/bin/uvicorn server:app --host 0.0.0.0 --port 3001
 Restart=on-failure
 RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=luqman-vault
 
 [Install]
 WantedBy=multi-user.target
