@@ -9,7 +9,6 @@ export default async function FilesPage(props: {
   const searchParams = await props.searchParams;
   const currentPath = searchParams.path || "/";
   const files = await getFiles(currentPath);
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://luqman-server:3001";
 
   return (
     <>
@@ -20,7 +19,7 @@ export default async function FilesPage(props: {
       <div className="mb-5">
         <Breadcrumbs path={currentPath} />
       </div>
-      <FileBrowser files={files} currentPath={currentPath} apiBase={apiBase} />
+      <FileBrowser files={files} currentPath={currentPath} />
     </>
   );
 }

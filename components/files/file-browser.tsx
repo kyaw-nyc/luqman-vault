@@ -7,11 +7,9 @@ import { Download, FolderOpen } from "lucide-react";
 export function FileBrowser({
   files,
   currentPath,
-  apiBase,
 }: {
   files: FileItem[];
   currentPath: string;
-  apiBase: string;
 }) {
   const sorted = [...files].sort((a, b) => {
     if (a.isDirectory && !b.isDirectory) return -1;
@@ -100,7 +98,7 @@ export function FileBrowser({
                 <td className="px-5 py-3.5 text-right">
                   {!file.isDirectory && (
                     <a
-                      href={`${apiBase}/api/download?path=${encodeURIComponent(file.path)}`}
+                      href={`/api/download?path=${encodeURIComponent(file.path)}`}
                       download={file.name}
                       className="inline-flex rounded-md p-1.5 text-zinc-700 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-800/50 hover:text-zinc-400"
                     >
