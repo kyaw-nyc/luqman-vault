@@ -9,6 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 
 STORAGE_ROOT = Path("/home/luqman/Storage").resolve()
 ACTIVITY_SCAN_DEPTH = 3
@@ -19,7 +20,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # fine — this is private/Tailscale only
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -33,6 +34,23 @@ SERVICES = [
 ]
 
 
+# ── Request models ──────────────────────────────────────────────────────────
+
+class MkdirBody(BaseModel):
+    path: str = "/"
+    name: str
+
+class RenameBody(BaseModel):
+    path: str
+    newName: str
+
+class MoveBody(BaseModel):
+    fromPath: str
+    toPath: str
+
+
+# ── Path safety ─────────────────────────────────────────────────────────────
+
 def resolve_safe_path(path: str) -> Path:
     """Resolve a client path to an absolute path inside STORAGE_ROOT.
     Raises 400 if the resolved path escapes the storage root."""
@@ -44,6 +62,15 @@ def resolve_safe_path(path: str) -> Path:
 
     return resolved
 
+def safe_name(name: str) -> str:
+    """Validate a bare filename/folder name — no slashes, no dots-only names."""
+    name = name.strip()
+    if not name or "/" in name or name in (".", ".."):
+        raise HTTPException(status_code=400, detail="Invalid name")
+    return name
+
+
+# ── Read endpoints ───────────────────────────────────────────────────────────
 
 @app.get("/api/stats")
 def get_stats():
@@ -184,6 +211,8 @@ def download_file(path: str = Query(...)):
     return FileResponse(path=target, filename=target.name, media_type="application/octet-stream")
 
 
+# ── Write endpoints ──────────────────────────────────────────────────────────
+
 @app.post("/api/upload")
 async def upload_file(
     file: UploadFile = File(...),
@@ -196,7 +225,6 @@ async def upload_file(
     if not target_dir.is_dir():
         raise HTTPException(status_code=400, detail="Target path is not a directory")
 
-    # Strip any path components from the filename — only the bare name is allowed
     filename = Path(file.filename or "upload").name
     if not filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
@@ -204,8 +232,75 @@ async def upload_file(
     dest = target_dir / filename
 
     with open(dest, "wb") as f:
-        while chunk := await file.read(1024 * 1024):  # stream in 1 MB chunks
+        while chunk := await file.read(1024 * 1024):
             f.write(chunk)
 
     relative = "/" + str(dest.relative_to(STORAGE_ROOT))
     return {"path": relative, "size": dest.stat().st_size}
+
+
+@app.post("/api/mkdir")
+def create_dir(body: MkdirBody):
+    parent = resolve_safe_path(body.path)
+    name = safe_name(body.name)
+
+    if not parent.is_dir():
+        raise HTTPException(status_code=400, detail="Parent is not a directory")
+
+    target = (parent / name).resolve()
+    if not str(target).startswith(str(STORAGE_ROOT)):
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if target.exists():
+        raise HTTPException(status_code=409, detail="Already exists")
+
+    target.mkdir()
+    return {"path": "/" + str(target.relative_to(STORAGE_ROOT))}
+
+
+@app.post("/api/rename")
+def rename_item(body: RenameBody):
+    target = resolve_safe_path(body.path)
+    new_name = safe_name(body.newName)
+
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="Not found")
+
+    new_path = (target.parent / new_name).resolve()
+    if not str(new_path).startswith(str(STORAGE_ROOT)):
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if new_path.exists():
+        raise HTTPException(status_code=409, detail="Already exists")
+
+    target.rename(new_path)
+    return {"path": "/" + str(new_path.relative_to(STORAGE_ROOT))}
+
+
+@app.delete("/api/files")
+def delete_item(path: str = Query(...)):
+    target = resolve_safe_path(path)
+
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="Not found")
+    if target == STORAGE_ROOT:
+        raise HTTPException(status_code=400, detail="Cannot delete storage root")
+
+    if target.is_dir():
+        shutil.rmtree(target)
+    else:
+        target.unlink()
+
+    return {"deleted": True}
+
+
+@app.post("/api/move")
+def move_item(body: MoveBody):
+    src = resolve_safe_path(body.fromPath)
+    dst = resolve_safe_path(body.toPath)
+
+    if not src.exists():
+        raise HTTPException(status_code=404, detail="Source not found")
+    if dst.exists():
+        raise HTTPException(status_code=409, detail="Destination already exists")
+
+    shutil.move(str(src), str(dst))
+    return {"path": "/" + str(dst.relative_to(STORAGE_ROOT))}
