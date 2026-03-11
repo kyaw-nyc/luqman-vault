@@ -121,6 +121,9 @@ class BulkMoveBody(BaseModel):
 class ServiceActionBody(BaseModel):
     service: str
 
+class VersionRestoreBody(BaseModel):
+    id: str
+
 
 # ── Trash helpers ─────────────────────────────────────────────────────────────
 
@@ -163,6 +166,75 @@ def _move_to_trash(target: Path) -> dict:
         meta["items"].append(item)
         _write_trash(meta)
     return item
+
+
+# ── Version helpers ────────────────────────────────────────────────────────────
+
+VERSIONS_DIR = VAULT_DIR / "versions"
+VERSIONS_META = VERSIONS_DIR / "index.json"
+MAX_VERSIONS_PER_FILE = 5
+_versions_lock = threading.Lock()
+
+
+def _ensure_versions() -> None:
+    VERSIONS_DIR.mkdir(parents=True, exist_ok=True)
+    if not VERSIONS_META.exists():
+        VERSIONS_META.write_text(json.dumps({"versions": {}}))
+
+
+def _read_versions() -> dict:
+    _ensure_versions()
+    return json.loads(VERSIONS_META.read_text())
+
+
+def _write_versions(data: dict) -> None:
+    VERSIONS_META.write_text(json.dumps(data, indent=2))
+
+
+def _create_version(file_path: Path) -> dict | None:
+    """Snapshot a file before overwrite. Returns version entry or None."""
+    if not file_path.is_file():
+        return None
+
+    _ensure_versions()
+
+    rel_path = "/" + str(file_path.relative_to(STORAGE_ROOT))
+    version_id = uuid.uuid4().hex[:8]
+    stored_name = f"{version_id}_{file_path.name}"
+    dest = VERSIONS_DIR / stored_name
+
+    try:
+        size = file_path.stat().st_size
+        shutil.copy2(str(file_path), str(dest))
+    except (OSError, shutil.Error):
+        return None
+
+    entry = {
+        "id": version_id,
+        "storedName": stored_name,
+        "originalPath": rel_path,
+        "size": size,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+    }
+
+    with _versions_lock:
+        meta = _read_versions()
+        versions = meta["versions"]
+        if rel_path not in versions:
+            versions[rel_path] = []
+        versions[rel_path].append(entry)
+
+        if len(versions[rel_path]) > MAX_VERSIONS_PER_FILE:
+            to_remove = versions[rel_path][:-MAX_VERSIONS_PER_FILE]
+            versions[rel_path] = versions[rel_path][-MAX_VERSIONS_PER_FILE:]
+            for old in to_remove:
+                old_path = VERSIONS_DIR / old["storedName"]
+                if old_path.exists():
+                    old_path.unlink()
+
+        _write_versions(meta)
+
+    return entry
 
 
 # ── Path safety ───────────────────────────────────────────────────────────────
@@ -371,6 +443,135 @@ def storage_breakdown():
         pass
     result.sort(key=lambda x: x["sizeBytes"], reverse=True)
     return result
+
+
+@app.get("/api/storage-analytics")
+def storage_analytics():
+    folders: list[dict] = []
+    largest_files: list[dict] = []
+    type_counts: dict[str, dict] = {}
+    total_files = 0
+    total_folders = 0
+    total_size = 0
+
+    try:
+        for entry in sorted(STORAGE_ROOT.iterdir(), key=lambda e: e.name.lower()):
+            if entry.name.startswith("."):
+                continue
+            if entry.is_dir():
+                folder_size = 0
+                folder_files = 0
+                folder_dirs = 0
+                for root, dirs, files in os.walk(entry):
+                    dirs[:] = [d for d in dirs if not d.startswith(".")]
+                    folder_dirs += len(dirs)
+                    for fname in files:
+                        if fname.startswith("."):
+                            continue
+                        fp = Path(root) / fname
+                        try:
+                            st = fp.stat()
+                            sz = st.st_size
+                        except OSError:
+                            continue
+                        folder_size += sz
+                        folder_files += 1
+                        total_size += sz
+                        total_files += 1
+                        ext = fp.suffix.lstrip(".").lower() if fp.suffix else ""
+                        rel = "/" + str(fp.relative_to(STORAGE_ROOT))
+                        largest_files.append({
+                            "name": fname, "path": rel, "size": sz,
+                            "modifiedAt": datetime.fromtimestamp(st.st_mtime, tz=timezone.utc).isoformat(),
+                            "extension": ext or None,
+                        })
+                        key = ext or "(none)"
+                        if key not in type_counts:
+                            type_counts[key] = {"extension": key, "count": 0, "totalBytes": 0}
+                        type_counts[key]["count"] += 1
+                        type_counts[key]["totalBytes"] += sz
+
+                total_folders += 1 + folder_dirs
+                folders.append({
+                    "name": entry.name, "path": "/" + entry.name,
+                    "sizeBytes": folder_size, "fileCount": folder_files,
+                    "folderCount": folder_dirs,
+                })
+            else:
+                try:
+                    st = entry.stat()
+                    sz = st.st_size
+                except OSError:
+                    continue
+                total_size += sz
+                total_files += 1
+                ext = entry.suffix.lstrip(".").lower() if entry.suffix else ""
+                largest_files.append({
+                    "name": entry.name, "path": "/" + entry.name, "size": sz,
+                    "modifiedAt": datetime.fromtimestamp(st.st_mtime, tz=timezone.utc).isoformat(),
+                    "extension": ext or None,
+                })
+                key = ext or "(none)"
+                if key not in type_counts:
+                    type_counts[key] = {"extension": key, "count": 0, "totalBytes": 0}
+                type_counts[key]["count"] += 1
+                type_counts[key]["totalBytes"] += sz
+    except OSError:
+        pass
+
+    folders.sort(key=lambda x: x["sizeBytes"], reverse=True)
+    largest_files.sort(key=lambda x: x["size"], reverse=True)
+    largest_files = largest_files[:50]
+    type_list = sorted(type_counts.values(), key=lambda x: x["totalBytes"], reverse=True)[:20]
+
+    disk = shutil.disk_usage(STORAGE_ROOT)
+
+    return {
+        "totalFiles": total_files,
+        "totalFolders": total_folders,
+        "totalSizeBytes": total_size,
+        "diskTotalBytes": disk.total,
+        "diskUsedBytes": disk.used,
+        "diskFreeBytes": disk.free,
+        "folders": folders,
+        "largestFiles": largest_files,
+        "typeBreakdown": type_list,
+    }
+
+
+@app.get("/api/storage-tree")
+def storage_tree(path: str = Query(default="/")):
+    target = resolve_safe_path(path)
+    if not target.exists() or not target.is_dir():
+        raise HTTPException(status_code=400, detail="Not a valid directory")
+
+    children: list[dict] = []
+    for entry in sorted(target.iterdir(), key=lambda e: (not e.is_dir(), e.name.lower())):
+        if entry.name.startswith("."):
+            continue
+        rel = "/" + str(entry.relative_to(STORAGE_ROOT))
+        if entry.is_dir():
+            total = 0
+            fc = 0
+            for root, dirs, files in os.walk(entry):
+                dirs[:] = [d for d in dirs if not d.startswith(".")]
+                for f in files:
+                    try:
+                        total += (Path(root) / f).stat().st_size
+                    except OSError:
+                        pass
+                    fc += 1
+            children.append({"name": entry.name, "path": rel, "isDirectory": True,
+                             "sizeBytes": total, "fileCount": fc})
+        else:
+            try:
+                sz = entry.stat().st_size
+            except OSError:
+                continue
+            children.append({"name": entry.name, "path": rel, "isDirectory": False,
+                             "sizeBytes": sz, "fileCount": 0})
+
+    return {"path": path, "children": children}
 
 
 @app.get("/api/metrics")
@@ -645,13 +846,19 @@ async def upload_file(
         raise HTTPException(status_code=400, detail="Invalid filename")
 
     dest = target_dir / filename
+
+    versioned = False
+    if dest.exists() and dest.is_file():
+        _create_version(dest)
+        versioned = True
+
     with open(dest, "wb") as f:
         while chunk := await file.read(1024 * 1024):
             f.write(chunk)
 
     relative = "/" + str(dest.relative_to(STORAGE_ROOT))
     log_activity("uploaded", filename, relative)
-    return {"path": relative, "size": dest.stat().st_size}
+    return {"path": relative, "size": dest.stat().st_size, "versioned": versioned}
 
 
 @app.post("/api/mkdir")
@@ -840,6 +1047,50 @@ def move_item(body: MoveBody):
     relative = "/" + str(dst.relative_to(STORAGE_ROOT))
     log_activity("moved", dst.name, relative)
     return {"path": relative}
+
+
+# ── Version history ────────────────────────────────────────────────────────────
+
+@app.get("/api/versions")
+def get_versions(path: str = Query(...)):
+    meta = _read_versions()
+    versions = meta["versions"].get(path, [])
+    valid = [v for v in versions if (VERSIONS_DIR / v["storedName"]).exists()]
+    return {"path": path, "versions": valid}
+
+
+@app.post("/api/versions/restore")
+def restore_version(body: VersionRestoreBody):
+    with _versions_lock:
+        meta = _read_versions()
+        for _path_key, versions in meta["versions"].items():
+            for v in versions:
+                if v["id"] == body.id:
+                    src = VERSIONS_DIR / v["storedName"]
+                    if not src.exists():
+                        raise HTTPException(404, "Version file not found")
+                    dest = resolve_safe_path(v["originalPath"])
+                    if dest.exists() and dest.is_file():
+                        _create_version(dest)
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(str(src), str(dest))
+                    log_activity("modified", dest.name, v["originalPath"])
+                    return {"ok": True, "restoredTo": v["originalPath"]}
+        raise HTTPException(404, "Version not found")
+
+
+@app.get("/api/versions/download")
+def download_version(id: str = Query(...)):
+    meta = _read_versions()
+    for _path_key, versions in meta["versions"].items():
+        for v in versions:
+            if v["id"] == id:
+                src = VERSIONS_DIR / v["storedName"]
+                if not src.exists():
+                    raise HTTPException(404, "Version file not found")
+                mime = mimetypes.guess_type(v["storedName"])[0] or "application/octet-stream"
+                return FileResponse(path=src, media_type=mime, filename=v["storedName"])
+    raise HTTPException(404, "Version not found")
 
 
 # ── WebSocket Terminal ─────────────────────────────────────────────────────────

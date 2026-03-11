@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FolderOpen, Activity, Server, Trash2, Bookmark, TerminalSquare } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Activity, Server, Trash2, Bookmark, TerminalSquare, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePins } from "@/hooks/use-pins";
 
@@ -10,6 +10,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/files",     label: "Files",     icon: FolderOpen      },
   { href: "/health",    label: "Health",    icon: Activity         },
+  { href: "/analytics", label: "Analytics", icon: BarChart3        },
   { href: "/trash",     label: "Trash",     icon: Trash2           },
 ];
 

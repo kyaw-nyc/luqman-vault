@@ -26,11 +26,13 @@ import {
   Check,
   Bookmark,
   CheckSquare,
+  Clock,
 } from "lucide-react";
 import type { FileItem, SearchResult } from "@/types/files";
 import { FileIcon } from "./file-icon";
 import { FilePreview } from "./file-preview";
 import { BulkActionBar } from "./bulk-action-bar";
+import { VersionDrawer } from "./version-drawer";
 import { formatBytes, formatDateCompact } from "@/lib/formatters";
 import {
   createFolder,
@@ -159,6 +161,7 @@ export function FileBrowser({
 
   // Mobile action sheet
   const [mobileMenuFile, setMobileMenuFile] = useState<FileItem | null>(null);
+  const [versionFile, setVersionFile] = useState<FileItem | null>(null);
 
   // Search input ref for keyboard shortcut focus
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -618,6 +621,18 @@ export function FileBrowser({
                 <FolderInput className="h-3.5 w-3.5" />
                 Move to
               </button>
+              {!file.isDirectory && (
+                <button
+                  onClick={() => {
+                    setVersionFile(file);
+                    setOpenMenu(null);
+                  }}
+                  className="flex w-full items-center gap-2.5 px-3 py-3 text-[13px] text-zinc-400 transition-colors hover:bg-zinc-800/40 hover:text-zinc-200"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  Versions
+                </button>
+              )}
               <div className="my-1 border-t border-zinc-800/40" />
               <button
                 onClick={() => openDialog({ type: "delete", target: file })}
@@ -1187,6 +1202,18 @@ export function FileBrowser({
                           <FolderInput className="h-3.5 w-3.5" />
                           Move to
                         </button>
+                        {!file.isDirectory && (
+                          <button
+                            onClick={() => {
+                              setVersionFile(file);
+                              setOpenMenu(null);
+                            }}
+                            className="flex w-full items-center gap-2.5 px-3 py-3 text-[13px] text-zinc-400 transition-colors hover:bg-zinc-800/40 hover:text-zinc-200"
+                          >
+                            <Clock className="h-3.5 w-3.5" />
+                            Versions
+                          </button>
+                        )}
                         <div className="my-1 border-t border-zinc-800/40" />
                         <button
                           onClick={() => openDialog({ type: "delete", target: file })}
@@ -1408,6 +1435,18 @@ export function FileBrowser({
                 <FolderInput className="h-5 w-5 text-zinc-500" />
                 Move to
               </button>
+              {!mobileMenuFile.isDirectory && (
+                <button
+                  onClick={() => {
+                    setVersionFile(mobileMenuFile);
+                    setMobileMenuFile(null);
+                  }}
+                  className="flex w-full items-center gap-4 px-5 py-4 text-[15px] text-zinc-300 transition-colors active:bg-zinc-800/50"
+                >
+                  <Clock className="h-5 w-5 text-zinc-500" />
+                  Version History
+                </button>
+              )}
               <button
                 onClick={() => {
                   toggleSelect(mobileMenuFile.path);
@@ -1451,6 +1490,14 @@ export function FileBrowser({
 
       {/* ── File preview drawer ───────────────────────────────────────────── */}
       <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} />
+
+      {/* ── Version History Drawer ─────────────────────────────────────────── */}
+      <VersionDrawer
+        filePath={versionFile?.path ?? ""}
+        fileName={versionFile?.name ?? ""}
+        open={!!versionFile}
+        onClose={() => setVersionFile(null)}
+      />
 
       {/* ── Dialogs ───────────────────────────────────────────────────────── */}
 

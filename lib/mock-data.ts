@@ -2,6 +2,7 @@ import type { FileItem, SearchResult } from "@/types/files";
 import type { StorageStats, RecentActivity, StorageFolder } from "@/types/stats";
 import type { HealthItem, SystemInfo } from "@/types/health";
 import type { SystemMetrics } from "@/types/metrics";
+import type { StorageAnalytics } from "@/types/analytics";
 
 export const mockStats: StorageStats = {
   totalBytes: 1932735283200,
@@ -173,3 +174,34 @@ export function mockGetMetrics(): SystemMetrics {
     },
   };
 }
+
+export const mockStorageAnalytics: StorageAnalytics = {
+  totalFiles: 2847,
+  totalFolders: 156,
+  totalSizeBytes: 796_917_760_000,
+  diskTotalBytes: 1_932_735_283_200,
+  diskUsedBytes: 796_917_760_000,
+  diskFreeBytes: 1_135_817_523_200,
+  folders: [
+    { name: "Media", path: "/Media", sizeBytes: 420_000_000_000, fileCount: 1200, folderCount: 45 },
+    { name: "Backups", path: "/Backups", sizeBytes: 200_000_000_000, fileCount: 50, folderCount: 10 },
+    { name: "ServerSync", path: "/ServerSync", sizeBytes: 100_000_000_000, fileCount: 800, folderCount: 30 },
+    { name: "School", path: "/School", sizeBytes: 50_000_000_000, fileCount: 500, folderCount: 40 },
+    { name: "Projects", path: "/Projects", sizeBytes: 20_000_000_000, fileCount: 250, folderCount: 25 },
+    { name: "Archive", path: "/Archive", sizeBytes: 6_917_760_000, fileCount: 47, folderCount: 6 },
+  ],
+  largestFiles: [
+    { name: "server-backup.tar.gz", path: "/Backups/server-backup.tar.gz", size: 45_000_000_000, modifiedAt: "2026-03-01T12:00:00Z", extension: "gz" },
+    { name: "ubuntu-22.04.iso", path: "/Media/ISOs/ubuntu-22.04.iso", size: 4_700_000_000, modifiedAt: "2026-02-15T10:00:00Z", extension: "iso" },
+    { name: "lecture-recording.mp4", path: "/School/Lectures/lecture-recording.mp4", size: 2_400_000_000, modifiedAt: "2026-03-05T14:30:00Z", extension: "mp4" },
+  ],
+  typeBreakdown: [
+    { extension: "mp4", count: 180, totalBytes: 300_000_000_000 },
+    { extension: "gz", count: 25, totalBytes: 150_000_000_000 },
+    { extension: "iso", count: 5, totalBytes: 50_000_000_000 },
+    { extension: "pdf", count: 400, totalBytes: 20_000_000_000 },
+    { extension: "jpg", count: 800, totalBytes: 15_000_000_000 },
+    { extension: "py", count: 300, totalBytes: 5_000_000_000 },
+    { extension: "md", count: 200, totalBytes: 1_000_000_000 },
+  ],
+};

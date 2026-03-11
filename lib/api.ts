@@ -2,6 +2,7 @@ import type { FileItem, SearchResult, TrashItem } from "@/types/files";
 import type { StorageStats, RecentActivity, StorageFolder } from "@/types/stats";
 import type { HealthItem, SystemInfo } from "@/types/health";
 import type { SystemMetrics } from "@/types/metrics";
+import type { StorageAnalytics, FileVersion } from "@/types/analytics";
 import {
   mockFiles,
   mockStats,
@@ -10,6 +11,7 @@ import {
   mockSystemInfo,
   mockStorageBreakdown,
   mockGetMetrics,
+  mockStorageAnalytics,
 } from "./mock-data";
 import { BACKEND_URL } from "./backend";
 
@@ -195,6 +197,45 @@ export async function restartService(service: string): Promise<void> {
 }
 
 // ── Upload (client-callable, same-origin proxy) ──────────────────────────────
+
+// ── Storage analytics (server-side) ──────────────────────────────────────────
+
+const EMPTY_ANALYTICS: StorageAnalytics = {
+  totalFiles: 0,
+  totalFolders: 0,
+  totalSizeBytes: 0,
+  diskTotalBytes: 0,
+  diskUsedBytes: 0,
+  diskFreeBytes: 0,
+  folders: [],
+  largestFiles: [],
+  typeBreakdown: [],
+};
+
+export async function getStorageAnalytics(): Promise<StorageAnalytics> {
+  return fetchApi("/api/storage-analytics", mockStorageAnalytics, NO_STORE);
+}
+
+// ── Version history (client-side, same-origin proxy) ─────────────────────────
+
+export async function getFileVersions(
+  path: string,
+): Promise<FileVersion[]> {
+  try {
+    const res = await fetch(
+      `/api/versions?path=${encodeURIComponent(path)}`,
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.versions ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function restoreVersion(id: string): Promise<void> {
+  return mutate("/api/versions/restore", { id });
+}
 
 // Called from a client component — uses a relative URL so the browser
 // never touches the backend directly.

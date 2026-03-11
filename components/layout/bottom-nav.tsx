@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FolderOpen, Activity, TerminalSquare } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Activity, BarChart3, TerminalSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, accent: "emerald" as const },
   { href: "/files",     label: "Files",     icon: FolderOpen,      accent: "emerald" as const },
   { href: "/health",    label: "Health",    icon: Activity,        accent: "emerald" as const },
+  { href: "/analytics", label: "Analytics", icon: BarChart3,       accent: "emerald" as const },
   { href: "/terminal",  label: "Terminal",  icon: TerminalSquare,  accent: "amber"   as const },
 ];
 
