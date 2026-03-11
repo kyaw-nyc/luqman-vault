@@ -10,8 +10,11 @@ import {
   Terminal,
   HardDrive,
   Trash2,
+  Folder,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePins } from "@/hooks/use-pins";
 
 interface Command {
   id: string;
@@ -19,15 +22,26 @@ interface Command {
   description?: string;
   icon: typeof LayoutDashboard;
   action: () => void;
+  group?: string;
 }
 
 function useCommands(router: ReturnType<typeof useRouter>, close: () => void) {
+  const { pins } = usePins();
   const go = (href: string) => {
     router.push(href);
     close();
   };
 
-  return [
+  const pinCommands: Command[] = pins.map((pin) => ({
+    id: `pin-${pin.path}`,
+    label: pin.label,
+    description: pin.path,
+    icon: Folder,
+    action: () => go(`/files?path=${encodeURIComponent(pin.path)}`),
+    group: "Favorites",
+  }));
+
+  const navCommands: Command[] = [
     {
       id: "dashboard",
       label: "Go to Dashboard",
@@ -73,7 +87,9 @@ function useCommands(router: ReturnType<typeof useRouter>, close: () => void) {
         close();
       },
     },
-  ] satisfies Command[];
+  ];
+
+  return [...pinCommands, ...navCommands];
 }
 
 export function CommandPalette() {
@@ -178,7 +194,7 @@ export function CommandPalette() {
         </div>
 
         {/* Command list */}
-        <div className="py-1.5">
+        <div className="max-h-[60vh] overflow-y-auto py-1.5">
           {filtered.length === 0 ? (
             <p className="px-4 py-3 text-[13px] text-zinc-600">
               No commands match &ldquo;{query}&rdquo;
@@ -186,47 +202,63 @@ export function CommandPalette() {
           ) : (
             filtered.map((cmd, i) => {
               const active = i === selectedIndex;
+              const showGroupHeader =
+                cmd.group && (i === 0 || filtered[i - 1].group !== cmd.group);
+              const isFavorite = cmd.group === "Favorites";
               return (
-                <button
-                  key={cmd.id}
-                  onClick={cmd.action}
-                  onMouseEnter={() => setSelectedIndex(i)}
-                  className={cn(
-                    "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
-                    active
-                      ? "bg-zinc-800/50"
-                      : "hover:bg-zinc-800/25",
+                <div key={cmd.id}>
+                  {showGroupHeader && (
+                    <div className="flex items-center gap-1.5 px-4 pb-1 pt-2">
+                      <Star className="h-2.5 w-2.5 text-amber-500/50" />
+                      <span className="text-[10px] font-medium uppercase tracking-widest text-zinc-700">
+                        {cmd.group}
+                      </span>
+                    </div>
                   )}
-                >
-                  <div
+                  <button
+                    onClick={cmd.action}
+                    onMouseEnter={() => setSelectedIndex(i)}
                     className={cn(
-                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors",
-                      active ? "bg-emerald-500/15" : "bg-zinc-800/60",
+                      "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
+                      active
+                        ? "bg-zinc-800/50"
+                        : "hover:bg-zinc-800/25",
                     )}
                   >
-                    <cmd.icon
+                    <div
                       className={cn(
-                        "h-3.5 w-3.5 transition-colors",
-                        active ? "text-emerald-400" : "text-zinc-600",
-                      )}
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={cn(
-                        "text-[13px] transition-colors",
-                        active ? "text-zinc-100" : "text-zinc-400",
+                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors",
+                        active
+                          ? isFavorite ? "bg-amber-500/15" : "bg-emerald-500/15"
+                          : "bg-zinc-800/60",
                       )}
                     >
-                      {cmd.label}
-                    </p>
-                    {cmd.description && (
-                      <p className="truncate font-mono text-[11px] text-zinc-700">
-                        {cmd.description}
+                      <cmd.icon
+                        className={cn(
+                          "h-3.5 w-3.5 transition-colors",
+                          active
+                            ? isFavorite ? "text-amber-400" : "text-emerald-400"
+                            : "text-zinc-600",
+                        )}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={cn(
+                          "text-[13px] transition-colors",
+                          active ? "text-zinc-100" : "text-zinc-400",
+                        )}
+                      >
+                        {cmd.label}
                       </p>
-                    )}
-                  </div>
-                </button>
+                      {cmd.description && (
+                        <p className="truncate font-mono text-[11px] text-zinc-700">
+                          {cmd.description}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                </div>
               );
             })
           )}

@@ -24,7 +24,8 @@ import {
   CheckCircle,
   AlertCircle,
   Check,
-  Bookmark,
+  Star,
+  Folder,
   CheckSquare,
   Clock,
   GalleryHorizontalEnd,
@@ -804,7 +805,7 @@ export function FileBrowser({
                   <FolderPlus className="h-4 w-4" />
                 </button>
 
-                {/* Pin — only when not at root */}
+                {/* Favorite / unfavorite — only when not at root */}
                 {currentPath !== "/" && (
                   <button
                     onClick={() =>
@@ -815,12 +816,12 @@ export function FileBrowser({
                     className={cn(
                       "rounded-md border p-2 transition-all",
                       isPinned(currentPath)
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:border-emerald-500/50"
+                        ? "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:border-amber-500/50"
                         : "border-zinc-800/50 bg-zinc-900/40 text-zinc-500 hover:border-zinc-700/60 hover:text-zinc-300",
                     )}
-                    title={isPinned(currentPath) ? "Unpin" : "Pin"}
+                    title={isPinned(currentPath) ? "Remove from Favorites" : "Add to Favorites"}
                   >
-                    <Bookmark className="h-4 w-4" />
+                    <Star className={cn("h-4 w-4", isPinned(currentPath) && "fill-current")} />
                   </button>
                 )}
               </div>
@@ -928,22 +929,40 @@ export function FileBrowser({
         />
       )}
 
-      {/* ── Mobile pins strip (hidden on md+, where sidebar shows them) ──── */}
+      {/* ── Favorites bar ──────────────────────────────────────────────── */}
       {pins.length > 0 && !isSearchMode && (
-        <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1 md:hidden">
-          <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-zinc-700">
-            Pinned
-          </span>
-          {pins.map((pin) => (
-            <Link
-              key={pin.path}
-              href={`/files?path=${encodeURIComponent(pin.path)}`}
-              className="flex shrink-0 items-center gap-1.5 rounded-full border border-zinc-800/50 bg-zinc-900/40 px-3 py-1.5 text-[11px] text-zinc-400 transition-colors hover:border-zinc-700/60 hover:text-zinc-200"
-            >
-              <Bookmark className="h-3 w-3 shrink-0" />
-              {pin.label}
-            </Link>
-          ))}
+        <div className="mb-3 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Star className="h-3 w-3 shrink-0 text-amber-500/50" />
+            {pins.map((pin) => {
+              const isActivePinned = pin.path === currentPath;
+              return (
+                <Link
+                  key={pin.path}
+                  href={`/files?path=${encodeURIComponent(pin.path)}`}
+                  className={cn(
+                    "flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 transition-all active:scale-[0.97] sm:px-3.5",
+                    isActivePinned
+                      ? "border-amber-500/30 bg-amber-500/[0.08] text-amber-300"
+                      : "border-zinc-800/50 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700/60 hover:text-zinc-200",
+                  )}
+                >
+                  <Folder className={cn(
+                    "h-3.5 w-3.5 shrink-0",
+                    isActivePinned ? "text-amber-400" : "text-zinc-600",
+                  )} />
+                  <div className="flex flex-col">
+                    <span className="max-w-[120px] truncate text-[12px] font-medium leading-tight sm:max-w-[160px]">
+                      {pin.label}
+                    </span>
+                    <span className="max-w-[120px] truncate font-mono text-[9px] leading-tight text-zinc-700 sm:max-w-[160px]">
+                      {pin.path}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       )}
 
