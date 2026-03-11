@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Luqman Vault",
   description: "Personal cloud dashboard",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({

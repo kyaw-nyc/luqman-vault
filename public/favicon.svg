@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Dark rounded background -->
+  <rect width="32" height="32" rx="7" fill="#0d0e13"/>
+  <!-- Shackle (arc of the lock) -->
+  <path d="M12 15.5V11.5a4 4 0 0 1 8 0v4" stroke="#10b981" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Lock body -->
+  <rect x="9" y="14.5" width="14" height="11.5" rx="3" stroke="#10b981" stroke-width="2"/>
+  <!-- Keyhole circle -->
+  <circle cx="16" cy="20.5" r="2" fill="#10b981" opacity="0.9"/>
+</svg>

@@ -1,22 +1,40 @@
 import type { RecentActivity } from "@/types/stats";
 import { formatRelativeTime } from "@/lib/formatters";
-import { FileEdit, Upload, FolderPlus, Trash2 } from "lucide-react";
+import {
+  FileEdit,
+  Upload,
+  FolderPlus,
+  Trash2,
+  Download,
+  Pencil,
+  ArrowRight,
+} from "lucide-react";
 
-const actionIcons = {
-  modified: FileEdit,
-  uploaded: Upload,
-  created: FolderPlus,
-  deleted: Trash2,
-};
-
-const actionColors = {
-  modified: "text-blue-400/80",
-  uploaded: "text-emerald-400/80",
-  created: "text-violet-400/80",
-  deleted: "text-red-400/80",
+const actionConfig: Record<
+  RecentActivity["action"],
+  { icon: typeof FileEdit; color: string; label: string }
+> = {
+  modified:   { icon: FileEdit,   color: "text-blue-400/80",    label: "modified"   },
+  uploaded:   { icon: Upload,     color: "text-emerald-400/80", label: "uploaded"   },
+  created:    { icon: FolderPlus, color: "text-violet-400/80",  label: "created"    },
+  deleted:    { icon: Trash2,     color: "text-red-400/80",     label: "deleted"    },
+  downloaded: { icon: Download,   color: "text-sky-400/80",     label: "downloaded" },
+  renamed:    { icon: Pencil,     color: "text-amber-400/80",   label: "renamed"    },
+  moved:      { icon: ArrowRight, color: "text-indigo-400/80",  label: "moved"      },
 };
 
 export function ActivityCard({ activity }: { activity: RecentActivity[] }) {
+  if (activity.length === 0) {
+    return (
+      <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-6">
+        <h3 className="mb-4 text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+          Recent Activity
+        </h3>
+        <p className="text-[13px] text-zinc-700">No activity yet.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-6">
       <h3 className="mb-5 text-[11px] font-medium uppercase tracking-widest text-zinc-600">
@@ -25,22 +43,24 @@ export function ActivityCard({ activity }: { activity: RecentActivity[] }) {
 
       <div className="space-y-0.5">
         {activity.map((item, i) => {
-          const Icon = actionIcons[item.action];
+          const cfg = actionConfig[item.action] ?? actionConfig.modified;
+          const Icon = cfg.icon;
           return (
             <div
               key={i}
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-zinc-800/25"
             >
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-800/50">
-                <Icon className={`h-3.5 w-3.5 ${actionColors[item.action]}`} />
+                <Icon className={`h-3.5 w-3.5 ${cfg.color}`} />
               </div>
               <div className="min-w-0 flex-1">
-                <span className="text-[13px] text-zinc-300">
-                  <span className="font-medium text-zinc-200">
-                    {item.fileName}
-                  </span>{" "}
-                  <span className="text-zinc-600">{item.action}</span>
-                </span>
+                <p className="truncate text-[13px]">
+                  <span className="font-medium text-zinc-200">{item.fileName}</span>{" "}
+                  <span className="text-zinc-600">{cfg.label}</span>
+                </p>
+                <p className="truncate font-mono text-[11px] text-zinc-700">
+                  {item.path}
+                </p>
               </div>
               <span className="shrink-0 font-mono text-[11px] text-zinc-700">
                 {formatRelativeTime(item.timestamp)}

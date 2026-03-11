@@ -8,7 +8,14 @@ export interface StorageStats {
 
 export interface RecentActivity {
   fileName: string;
-  action: "created" | "modified" | "deleted" | "uploaded";
+  action: "created" | "modified" | "deleted" | "uploaded" | "downloaded" | "renamed" | "moved";
   path: string;
   timestamp: string;
+}
+
+export interface StorageFolder {
+  name: string;
+  path: string;
+  sizeBytes: number;
+  fileCount: number;
 }

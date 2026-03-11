@@ -1,6 +1,7 @@
-import type { FileItem } from "@/types/files";
-import type { StorageStats, RecentActivity } from "@/types/stats";
+import type { FileItem, SearchResult } from "@/types/files";
+import type { StorageStats, RecentActivity, StorageFolder } from "@/types/stats";
 import type { HealthItem, SystemInfo } from "@/types/health";
+import type { SystemMetrics } from "@/types/metrics";
 
 export const mockStats: StorageStats = {
   totalBytes: 1932735283200,
@@ -79,3 +80,96 @@ export const mockSystemInfo: SystemInfo = {
   uptime: "14d 6h 32m",
   backendReachable: true,
 };
+
+export function mockSearch(
+  query: string,
+  basePath: string,
+): SearchResult[] {
+  if (!query.trim()) return [];
+  const q = query.toLowerCase();
+  const results: SearchResult[] = [];
+
+  for (const [folderPath, items] of Object.entries(fileDatabase)) {
+    const inBase =
+      basePath === "/" ||
+      folderPath === basePath ||
+      folderPath.startsWith(basePath + "/");
+    if (!inBase) continue;
+    for (const item of items) {
+      if (item.name.toLowerCase().includes(q)) {
+        results.push({ ...item, parentPath: folderPath });
+      }
+    }
+    if (results.length >= 50) break;
+  }
+  return results;
+}
+
+export function mockFolderSize(path: string): { sizeBytes: number } {
+  const found = mockStorageBreakdown.find((f) => f.path === path);
+  return { sizeBytes: found ? found.sizeBytes : 1_073_741_824 };
+}
+
+export const mockStorageBreakdown: StorageFolder[] = [
+  { name: "ServerSync", path: "/ServerSync", sizeBytes: 485391974400, fileCount: 12847 },
+  { name: "Media",      path: "/Media",      sizeBytes: 322122547200, fileCount: 1203 },
+  { name: "Projects",   path: "/Projects",   sizeBytes: 193273528320, fileCount: 5621 },
+  { name: "Backups",    path: "/Backups",    sizeBytes: 96636764160,  fileCount: 342 },
+  { name: "School",     path: "/School",     sizeBytes: 34023653376,  fileCount: 891 },
+  { name: "Archive",    path: "/Archive",    sizeBytes: 19327352832,  fileCount: 215 },
+];
+
+export function mockGetMetrics(): SystemMetrics {
+  return {
+    cpu: {
+      percent:    34.2,
+      loadAvg1m:  0.52,
+      loadAvg5m:  0.78,
+      loadAvg15m: 1.21,
+      cores:      4,
+    },
+    memory: {
+      totalBytes:     17_179_869_184,  // 16 GB
+      usedBytes:      10_308_517_888,  // ~9.6 GB
+      freeBytes:       2_576_980_378,  // ~2.4 GB
+      availableBytes:  6_871_947_674,  // ~6.4 GB
+      percentUsed:    60.0,
+    },
+    disk: {
+      totalBytes:  1_932_735_283_200,
+      usedBytes:     796_917_760_000,
+      freeBytes:   1_135_817_523_200,
+      percentUsed: 41.2,
+    },
+    uptime:     "14d 6h 32m",
+    hostname:   "luqman-server",
+    serverTime: new Date().toISOString(),
+    os: {
+      system: "Linux",
+      kernel: "6.8.0-52-generic",
+    },
+    topByCpu: [
+      { pid: 1842, name: "uvicorn",    cpuPercent: 12.3, memoryPercent: 1.2 },
+      { pid: 2301, name: "node",       cpuPercent:  8.7, memoryPercent: 4.1 },
+      { pid:  887, name: "smbd",       cpuPercent:  2.1, memoryPercent: 0.8 },
+      { pid: 1201, name: "tailscaled", cpuPercent:  0.8, memoryPercent: 0.5 },
+      { pid:    1, name: "systemd",    cpuPercent:  0.1, memoryPercent: 0.1 },
+    ],
+    topByMemory: [
+      { pid: 2301, name: "node",       cpuPercent:  8.7, memoryPercent: 4.1 },
+      { pid: 1842, name: "uvicorn",    cpuPercent: 12.3, memoryPercent: 1.2 },
+      { pid:  887, name: "smbd",       cpuPercent:  2.1, memoryPercent: 0.8 },
+      { pid: 1201, name: "tailscaled", cpuPercent:  0.8, memoryPercent: 0.5 },
+      { pid:    1, name: "systemd",    cpuPercent:  0.1, memoryPercent: 0.1 },
+    ],
+    network: {
+      primaryInterface: "enp2s0",
+      localIp:          "192.168.1.42",
+      tailscaleIp:      "100.101.102.103",
+    },
+    temperature: {
+      available: true,
+      value:     47.0,
+    },
+  };
+}

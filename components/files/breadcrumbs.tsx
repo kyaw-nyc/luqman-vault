@@ -5,7 +5,7 @@ export function Breadcrumbs({ path }: { path: string }) {
   const segments = path.split("/").filter(Boolean);
 
   return (
-    <nav className="inline-flex items-center gap-1 rounded-lg bg-zinc-900/50 px-3 py-1.5">
+    <nav className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap rounded-lg bg-zinc-900/50 px-3 py-1.5">
       <span className="font-mono text-[12px] text-zinc-600">~</span>
       <ChevronRight className="h-3 w-3 text-zinc-800" />
       <Link

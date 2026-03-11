@@ -46,16 +46,22 @@ const iconMap: Record<string, { icon: typeof File; color: string }> = {
 export function FileIcon({
   name,
   isDirectory,
+  size = "sm",
 }: {
   name: string;
   isDirectory: boolean;
+  size?: "sm" | "lg";
 }) {
+  const sizeClass = size === "lg"
+    ? (isDirectory ? "h-10 w-10" : "h-8 w-8")
+    : "h-4 w-4";
+
   if (isDirectory) {
-    return <Folder className="h-4 w-4 text-blue-400/70" />;
+    return <Folder className={`${sizeClass} text-blue-400/70`} />;
   }
 
   const ext = name.split(".").pop()?.toLowerCase() || "";
   const config = iconMap[ext] || { icon: File, color: "text-zinc-600" };
   const Icon = config.icon;
-  return <Icon className={`h-4 w-4 ${config.color}`} />;
+  return <Icon className={`${sizeClass} ${config.color}`} />;
 }

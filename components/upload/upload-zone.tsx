@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Upload,
   File,
@@ -31,6 +32,7 @@ const STORAGE_FOLDERS = [
 ];
 
 export function UploadZone() {
+  const router = useRouter();
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [targetFolder, setTargetFolder] = useState("/ServerSync");
   const [isDragOver, setIsDragOver] = useState(false);
@@ -64,6 +66,7 @@ export function UploadZone() {
   const runUpload = async () => {
     setIsUploading(true);
     const pending = files.filter((f) => f.status === "pending");
+    let completedCount = 0;
 
     for (const item of pending) {
       setFiles((prev) =>
@@ -81,6 +84,7 @@ export function UploadZone() {
             f.id === item.id ? { ...f, status: "complete", progress: 100 } : f,
           ),
         );
+        completedCount++;
       } catch {
         setFiles((prev) =>
           prev.map((f) => (f.id === item.id ? { ...f, status: "error" } : f)),
@@ -89,6 +93,13 @@ export function UploadZone() {
     }
 
     setIsUploading(false);
+
+    // Navigate to the target folder so the user can see the uploaded files
+    if (completedCount > 0) {
+      setTimeout(() => {
+        router.push(`/files?path=${encodeURIComponent(targetFolder)}`);
+      }, 1800);
+    }
   };
 
   const pendingCount = files.filter((f) => f.status === "pending").length;
