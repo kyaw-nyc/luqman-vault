@@ -27,12 +27,16 @@ import {
   Bookmark,
   CheckSquare,
   Clock,
+  GalleryHorizontalEnd,
+  Info,
 } from "lucide-react";
 import type { FileItem, SearchResult } from "@/types/files";
 import { FileIcon } from "./file-icon";
 import { FilePreview } from "./file-preview";
 import { BulkActionBar } from "./bulk-action-bar";
 import { VersionDrawer } from "./version-drawer";
+import { Lightbox } from "./lightbox";
+import { InspectorPanel } from "./inspector-panel";
 import { formatBytes, formatDateCompact } from "@/lib/formatters";
 import {
   createFolder,
@@ -87,7 +91,7 @@ type ActiveDialog =
 
 type SortKey = "name" | "size" | "modified";
 type SortDir = "asc" | "desc";
-type ViewMode = "list" | "grid";
+type ViewMode = "list" | "grid" | "gallery";
 
 interface UploadItem {
   id: string;
@@ -95,6 +99,10 @@ interface UploadItem {
   progress: number;
   status: "pending" | "uploading" | "complete" | "error";
 }
+
+const GALLERY_IMAGE_EXTS = new Set([
+  "jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "heic", "tiff",
+]);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -162,6 +170,8 @@ export function FileBrowser({
   // Mobile action sheet
   const [mobileMenuFile, setMobileMenuFile] = useState<FileItem | null>(null);
   const [versionFile, setVersionFile] = useState<FileItem | null>(null);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const [inspectorFile, setInspectorFile] = useState<FileItem | null>(null);
 
   // Search input ref for keyboard shortcut focus
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -177,7 +187,7 @@ export function FileBrowser({
   // Restore view mode from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("lv-view-mode");
-    if (saved === "grid" || saved === "list") setViewMode(saved);
+    if (saved === "grid" || saved === "list" || saved === "gallery") setViewMode(saved);
   }, []);
 
   function changeViewMode(mode: ViewMode) {
@@ -334,6 +344,18 @@ export function FileBrowser({
 
   const dirCount = localFiles.filter((f) => f.isDirectory).length;
   const fileCount = localFiles.length - dirCount;
+
+  const imageFiles = useMemo(
+    () =>
+      displayed.filter(
+        (f) =>
+          !f.isDirectory &&
+          f.extension &&
+          GALLERY_IMAGE_EXTS.has(f.extension.toLowerCase()),
+      ),
+    [displayed],
+  );
+  const hasGalleryImages = imageFiles.length >= 3;
 
   // Grouped search results
   const groupedResults = useMemo(() => {
@@ -633,6 +655,16 @@ export function FileBrowser({
                   Versions
                 </button>
               )}
+              <button
+                onClick={() => {
+                  setInspectorFile(file);
+                  setOpenMenu(null);
+                }}
+                className="flex w-full items-center gap-2.5 px-3 py-3 text-[13px] text-zinc-400 transition-colors hover:bg-zinc-800/40 hover:text-zinc-200"
+              >
+                <Info className="h-3.5 w-3.5" />
+                Details
+              </button>
               <div className="my-1 border-t border-zinc-800/40" />
               <button
                 onClick={() => openDialog({ type: "delete", target: file })}
@@ -787,6 +819,20 @@ export function FileBrowser({
                 >
                   <LayoutGrid className="h-4 w-4" />
                 </button>
+                {hasGalleryImages && (
+                  <button
+                    onClick={() => changeViewMode("gallery")}
+                    className={cn(
+                      "rounded p-2 transition-colors",
+                      viewMode === "gallery"
+                        ? "bg-zinc-700/60 text-zinc-200"
+                        : "text-zinc-600 hover:text-zinc-400",
+                    )}
+                    title="Gallery view"
+                  >
+                    <GalleryHorizontalEnd className="h-4 w-4" />
+                  </button>
+                )}
               </div>
 
               {/* Upload button */}
@@ -1214,6 +1260,16 @@ export function FileBrowser({
                             Versions
                           </button>
                         )}
+                        <button
+                          onClick={() => {
+                            setInspectorFile(file);
+                            setOpenMenu(null);
+                          }}
+                          className="flex w-full items-center gap-2.5 px-3 py-3 text-[13px] text-zinc-400 transition-colors hover:bg-zinc-800/40 hover:text-zinc-200"
+                        >
+                          <Info className="h-3.5 w-3.5" />
+                          Details
+                        </button>
                         <div className="my-1 border-t border-zinc-800/40" />
                         <button
                           onClick={() => openDialog({ type: "delete", target: file })}
@@ -1259,6 +1315,55 @@ export function FileBrowser({
                 </p>
               </div>
             ))}
+          </div>
+        ) : viewMode === "gallery" && hasGalleryImages ? (
+          /* ── Gallery view ─────────────────────────────────────────────── */
+          <div>
+            {/* Non-image items in compact list */}
+            {displayed.filter((f) => f.isDirectory || !f.extension || !GALLERY_IMAGE_EXTS.has(f.extension.toLowerCase())).length > 0 && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {displayed
+                  .filter((f) => f.isDirectory || !f.extension || !GALLERY_IMAGE_EXTS.has(f.extension.toLowerCase()))
+                  .map((file) => (
+                    <Link
+                      key={file.path}
+                      href={file.isDirectory ? `/files?path=${encodeURIComponent(file.path)}` : "#"}
+                      onClick={!file.isDirectory ? (e) => { e.preventDefault(); setPreviewFile(file); } : undefined}
+                      className="flex items-center gap-2 rounded-lg border border-zinc-800/40 bg-zinc-900/30 px-3 py-2 text-[12px] text-zinc-400 transition-colors hover:border-zinc-700/60 hover:text-zinc-200"
+                    >
+                      <FileIcon name={file.name} isDirectory={file.isDirectory} />
+                      <span className="truncate">{file.name}</span>
+                    </Link>
+                  ))}
+              </div>
+            )}
+
+            {/* Image gallery grid */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {imageFiles.map((file, i) => (
+                <button
+                  key={file.path}
+                  onClick={() => setLightboxIdx(i)}
+                  className="group relative aspect-square overflow-hidden rounded-xl border border-zinc-800/40 bg-zinc-900/30 transition-all hover:border-zinc-700/60"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/download?path=${encodeURIComponent(file.path)}&inline=1`}
+                    alt={file.name}
+                    loading="lazy"
+                    className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-2.5 pb-2 pt-6">
+                    <p className="truncate font-mono text-[11px] text-white/90">
+                      {file.name}
+                    </p>
+                    <p className="font-mono text-[10px] text-white/50">
+                      {formatBytes(file.size)}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           /* ── List view ───────────────────────────────────────────────── */
@@ -1449,6 +1554,16 @@ export function FileBrowser({
               )}
               <button
                 onClick={() => {
+                  setInspectorFile(mobileMenuFile);
+                  setMobileMenuFile(null);
+                }}
+                className="flex w-full items-center gap-4 px-5 py-4 text-[15px] text-zinc-300 transition-colors active:bg-zinc-800/50"
+              >
+                <Info className="h-5 w-5 text-zinc-500" />
+                Details
+              </button>
+              <button
+                onClick={() => {
                   toggleSelect(mobileMenuFile.path);
                   setSelectMode(true);
                   setMobileMenuFile(null);
@@ -1497,6 +1612,42 @@ export function FileBrowser({
         fileName={versionFile?.name ?? ""}
         open={!!versionFile}
         onClose={() => setVersionFile(null)}
+      />
+
+      {/* ── Lightbox ──────────────────────────────────────────────────────── */}
+      {lightboxIdx !== null && imageFiles.length > 0 && (
+        <Lightbox
+          images={imageFiles}
+          currentIndex={lightboxIdx}
+          onClose={() => setLightboxIdx(null)}
+          onNavigate={setLightboxIdx}
+          onInfo={(f) => {
+            setLightboxIdx(null);
+            setInspectorFile(f);
+          }}
+        />
+      )}
+
+      {/* ── Inspector Panel ───────────────────────────────────────────────── */}
+      <InspectorPanel
+        file={inspectorFile}
+        onClose={() => setInspectorFile(null)}
+        onRename={(f) => {
+          setInspectorFile(null);
+          openDialog({ type: "rename", target: f }, f.name);
+        }}
+        onMove={(f) => {
+          setInspectorFile(null);
+          openDialog({ type: "move", target: f });
+        }}
+        onDelete={(f) => {
+          setInspectorFile(null);
+          openDialog({ type: "delete", target: f });
+        }}
+        onVersions={(f) => {
+          setInspectorFile(null);
+          setVersionFile(f);
+        }}
       />
 
       {/* ── Dialogs ───────────────────────────────────────────────────────── */}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FolderOpen, Activity, Server, Trash2, Bookmark, TerminalSquare, BarChart3 } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Activity, Server, Trash2, Bookmark, TerminalSquare, BarChart3, Clock, HardDrive, Image, FileText, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePins } from "@/hooks/use-pins";
 
@@ -60,6 +60,44 @@ export function Sidebar() {
             </Link>
           );
         })}
+
+        {/* Views */}
+        <div className="mt-5">
+          <div className="px-3 pb-1.5">
+            <span className="text-[10px] font-medium uppercase tracking-widest text-zinc-700">
+              Views
+            </span>
+          </div>
+          {[
+            { href: "/views/recent", label: "Recent", icon: Clock },
+            { href: "/views/large", label: "Large Files", icon: HardDrive },
+            { href: "/views/images", label: "Images", icon: Image },
+            { href: "/views/documents", label: "Documents", icon: FileText },
+            { href: "/views/versioned", label: "Versioned", icon: History },
+          ].map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "group flex items-center gap-3 rounded-md px-3 py-1.5 text-[12px] transition-all",
+                  isActive
+                    ? "bg-zinc-800/50 font-medium text-zinc-100"
+                    : "text-zinc-500 hover:bg-zinc-800/25 hover:text-zinc-300",
+                )}
+              >
+                <item.icon
+                  className={cn(
+                    "h-3.5 w-3.5 shrink-0 transition-colors",
+                    isActive ? "text-emerald-400" : "text-zinc-700 group-hover:text-zinc-500",
+                  )}
+                />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
 
         {/* Advanced */}
         <div className="mt-5">

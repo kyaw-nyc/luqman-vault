@@ -1093,6 +1093,98 @@ def download_version(id: str = Query(...)):
     raise HTTPException(404, "Version not found")
 
 
+# ── Smart views ───────────────────────────────────────────────────────────────
+
+IMAGE_EXTS = {"jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "heic", "tiff", "ico"}
+DOC_EXTS = {"pdf", "doc", "docx", "txt", "md", "pages", "odt", "rtf", "xls", "xlsx", "csv", "ppt", "pptx"}
+
+
+def _walk_files(limit: int = 500) -> list[dict]:
+    """Walk the storage tree and return file metadata, skipping hidden dirs/files."""
+    results: list[dict] = []
+    for root, dirs, files in os.walk(STORAGE_ROOT):
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+        for fname in files:
+            if fname.startswith("."):
+                continue
+            fp = Path(root) / fname
+            try:
+                st = fp.stat()
+            except OSError:
+                continue
+            ext = fp.suffix.lstrip(".").lower() if fp.suffix else None
+            rel = "/" + str(fp.relative_to(STORAGE_ROOT))
+            results.append({
+                "name": fname, "path": rel, "isDirectory": False,
+                "size": st.st_size,
+                "modifiedAt": datetime.fromtimestamp(st.st_mtime, tz=timezone.utc).isoformat(),
+                "extension": ext,
+                "mimeType": mimetypes.guess_type(fname)[0],
+                "parentPath": "/" + str(fp.parent.relative_to(STORAGE_ROOT)),
+            })
+            if len(results) >= limit:
+                return results
+    return results
+
+
+@app.get("/api/smart-view")
+def smart_view(type: str = Query(...)):
+    if type == "recent":
+        cutoff = datetime.now(timezone.utc).timestamp() - 7 * 86400
+        all_files = _walk_files(limit=5000)
+        recent = [f for f in all_files if datetime.fromisoformat(f["modifiedAt"]).timestamp() > cutoff]
+        recent.sort(key=lambda x: x["modifiedAt"], reverse=True)
+        return recent[:200]
+
+    elif type == "large":
+        all_files = _walk_files(limit=5000)
+        large = [f for f in all_files if f["size"] > 50 * 1024 * 1024]
+        large.sort(key=lambda x: x["size"], reverse=True)
+        return large[:100]
+
+    elif type == "images":
+        all_files = _walk_files(limit=5000)
+        images = [f for f in all_files if f.get("extension") in IMAGE_EXTS]
+        images.sort(key=lambda x: x["modifiedAt"], reverse=True)
+        return images[:300]
+
+    elif type == "documents":
+        all_files = _walk_files(limit=5000)
+        docs = [f for f in all_files if f.get("extension") in DOC_EXTS]
+        docs.sort(key=lambda x: x["modifiedAt"], reverse=True)
+        return docs[:300]
+
+    elif type == "versioned":
+        meta = _read_versions()
+        results: list[dict] = []
+        for path_key, versions in meta["versions"].items():
+            valid = [v for v in versions if (VERSIONS_DIR / v["storedName"]).exists()]
+            if not valid:
+                continue
+            target = resolve_safe_path(path_key)
+            if not target.exists():
+                continue
+            try:
+                st = target.stat()
+            except OSError:
+                continue
+            ext = target.suffix.lstrip(".").lower() if target.suffix else None
+            results.append({
+                "name": target.name, "path": path_key, "isDirectory": False,
+                "size": st.st_size,
+                "modifiedAt": datetime.fromtimestamp(st.st_mtime, tz=timezone.utc).isoformat(),
+                "extension": ext,
+                "mimeType": mimetypes.guess_type(target.name)[0],
+                "parentPath": "/" + str(target.parent.relative_to(STORAGE_ROOT)),
+                "versionCount": len(valid),
+            })
+        results.sort(key=lambda x: x["modifiedAt"], reverse=True)
+        return results
+
+    else:
+        raise HTTPException(400, f"Unknown view type: {type}")
+
+
 # ── WebSocket Terminal ─────────────────────────────────────────────────────────
 
 TERMINAL_IDLE_TIMEOUT = 15 * 60  # 15 minutes
