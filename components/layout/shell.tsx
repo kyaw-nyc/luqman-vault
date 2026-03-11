@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Sidebar } from "./sidebar";
 import { BottomNav } from "./bottom-nav";
 import { CommandPalette } from "./command-palette";
@@ -5,7 +6,9 @@ import { CommandPalette } from "./command-palette";
 export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen">
-      <Sidebar />
+      <Suspense>
+        <Sidebar />
+      </Suspense>
       <CommandPalette />
       <BottomNav />
       <main className="min-h-screen md:ml-[260px]">

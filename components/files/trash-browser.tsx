@@ -193,7 +193,7 @@ export function TrashBrowser({ items: initial }: { items: TrashItem[] }) {
             onClick={() => confirmDeleteId && handlePermanentDelete(confirmDeleteId)}
             className="rounded-md bg-red-500/80 px-4 py-1.5 text-[13px] font-medium text-white transition-all hover:bg-red-500"
           >
-            Delete forever
+            Delete permanently
           </button>
         </div>
       </Dialog>

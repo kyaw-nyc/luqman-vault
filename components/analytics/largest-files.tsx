@@ -15,15 +15,15 @@ export function LargestFiles({ files }: Props) {
   const visible = files.slice(0, showCount);
 
   return (
-    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-5 sm:p-6">
-      <h3 className="mb-4 text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-4 sm:p-6">
+      <h3 className="mb-3 text-[11px] font-medium uppercase tracking-widest text-zinc-600 sm:mb-4">
         Largest Files
       </h3>
 
       {visible.length === 0 ? (
         <p className="text-sm text-zinc-600">No files found</p>
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           {visible.map((file, i) => {
             const parentPath = file.path.substring(
               0,
@@ -32,24 +32,30 @@ export function LargestFiles({ files }: Props) {
             return (
               <div
                 key={file.path}
-                className="group flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-zinc-800/30"
+                className="group flex items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-zinc-800/30 sm:gap-3 sm:py-1.5"
               >
-                <span className="w-5 text-right font-mono text-[11px] text-zinc-700">
+                <span className="w-4 shrink-0 text-right font-mono text-[10px] text-zinc-700 sm:w-5 sm:text-[11px]">
                   {i + 1}
                 </span>
                 <FileIcon name={file.name} isDirectory={false} />
                 <div className="min-w-0 flex-1">
                   <Link
                     href={`/files?path=${encodeURIComponent(parentPath)}`}
-                    className="block truncate font-mono text-[13px] text-zinc-300 transition-colors group-hover:text-emerald-400"
+                    className="block truncate font-mono text-[12px] text-zinc-300 transition-colors group-hover:text-emerald-400 sm:text-[13px]"
                   >
                     {file.name}
                   </Link>
-                  <span className="block truncate font-mono text-[10px] text-zinc-700">
+                  {/* Mobile: size + time inline */}
+                  <span className="mt-0.5 block truncate font-mono text-[10px] text-zinc-600 sm:hidden">
+                    {formatBytes(file.size)} · {formatRelativeTime(file.modifiedAt)}
+                  </span>
+                  {/* Desktop: full path */}
+                  <span className="hidden truncate font-mono text-[10px] text-zinc-700 sm:block">
                     {file.path}
                   </span>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-0.5">
+                {/* Desktop: size + time stacked right */}
+                <div className="hidden shrink-0 flex-col items-end gap-0.5 sm:flex">
                   <span className="font-mono text-[12px] text-zinc-400">
                     {formatBytes(file.size)}
                   </span>

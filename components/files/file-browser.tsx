@@ -653,7 +653,7 @@ export function FileBrowser({
                   className="flex w-full items-center gap-2.5 px-3 py-3 text-[13px] text-zinc-400 transition-colors hover:bg-zinc-800/40 hover:text-zinc-200"
                 >
                   <Clock className="h-3.5 w-3.5" />
-                  Versions
+                  Version History
                 </button>
               )}
               <button
@@ -1837,7 +1837,7 @@ export function FileBrowser({
           </button>
           <button
             onClick={handleBulkDelete}
-            className="flex items-center gap-2 rounded-md bg-red-500/80 px-4 py-1.5 text-[13px] font-medium text-white transition-all hover:bg-red-500"
+            className="flex items-center gap-2 rounded-md bg-zinc-700 px-4 py-1.5 text-[13px] font-medium text-zinc-100 transition-all hover:bg-zinc-600"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Move to Trash

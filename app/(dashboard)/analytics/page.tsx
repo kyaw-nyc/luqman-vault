@@ -49,23 +49,23 @@ export default async function AnalyticsPage() {
       <PageHeader
         title="Storage Analytics"
         description="Real-time storage breakdown and usage insights"
-        right={<LiveIndicator serverTimestamp={Date.now()} />}
+        right={<LiveIndicator interval={60_000} serverTimestamp={Date.now()} />}
       />
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-4">
         {summaryCards.map((card) => (
           <div
             key={card.label}
-            className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-4 sm:p-5"
+            className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-3 sm:p-5"
           >
-            <div className="mb-2 flex items-center gap-2">
-              <card.icon className="h-3.5 w-3.5 text-zinc-600" />
-              <span className="text-[10px] font-medium uppercase tracking-widest text-zinc-600">
+            <div className="mb-1.5 flex items-center gap-1.5 sm:mb-2 sm:gap-2">
+              <card.icon className="h-3 w-3 text-zinc-600 sm:h-3.5 sm:w-3.5" />
+              <span className="text-[9px] font-medium uppercase tracking-widest text-zinc-600 sm:text-[10px]">
                 {card.label}
               </span>
             </div>
-            <span className="font-mono text-lg font-semibold text-zinc-200 sm:text-xl">
+            <span className="truncate font-mono text-[15px] font-semibold text-zinc-200 sm:text-xl">
               {card.value}
             </span>
           </div>

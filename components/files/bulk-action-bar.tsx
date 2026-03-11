@@ -49,10 +49,10 @@ export function BulkActionBar({
       <button
         onClick={onDelete}
         className="flex shrink-0 items-center gap-1.5 rounded-md p-2 text-[12px] text-red-400/80 transition-colors hover:bg-red-500/5 hover:text-red-400 sm:px-3 sm:py-1.5"
-        title="Trash"
+        title="Move to Trash"
       >
         <Trash2 className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Trash</span>
+        <span className="hidden sm:inline">Move to Trash</span>
       </button>
 
       <div className="h-4 w-px shrink-0 bg-zinc-800" />

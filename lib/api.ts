@@ -15,8 +15,8 @@ import {
 } from "./mock-data";
 import { BACKEND_URL } from "./backend";
 
-// Server-side mock toggle — does not leak to the browser
-const USE_MOCK = process.env.USE_MOCK !== "false";
+// Mock mode is opt-in: set USE_MOCK=true in .env.local for local dev only.
+const USE_MOCK = process.env.USE_MOCK === "true";
 
 async function fetchApi<T>(
   endpoint: string,
@@ -25,14 +25,9 @@ async function fetchApi<T>(
 ): Promise<T> {
   if (USE_MOCK) return fallback;
 
-  try {
-    const res = await fetch(`${BACKEND_URL}${endpoint}`, options);
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
-    return res.json();
-  } catch {
-    console.warn(`API call failed for ${endpoint}, using mock data`);
-    return fallback;
-  }
+  const res = await fetch(`${BACKEND_URL}${endpoint}`, options);
+  if (!res.ok) throw new Error(`API ${endpoint}: ${res.status}`);
+  return res.json();
 }
 
 const NO_STORE = { cache: "no-store" } satisfies RequestInit;
@@ -199,18 +194,6 @@ export async function restartService(service: string): Promise<void> {
 // ── Upload (client-callable, same-origin proxy) ──────────────────────────────
 
 // ── Storage analytics (server-side) ──────────────────────────────────────────
-
-const EMPTY_ANALYTICS: StorageAnalytics = {
-  totalFiles: 0,
-  totalFolders: 0,
-  totalSizeBytes: 0,
-  diskTotalBytes: 0,
-  diskUsedBytes: 0,
-  diskFreeBytes: 0,
-  folders: [],
-  largestFiles: [],
-  typeBreakdown: [],
-};
 
 export async function getStorageAnalytics(): Promise<StorageAnalytics> {
   return fetchApi("/api/storage-analytics", mockStorageAnalytics, NO_STORE);

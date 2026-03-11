@@ -26,23 +26,23 @@ export function TypeBreakdown({ types }: Props) {
   const maxBytes = types.length > 0 ? types[0].totalBytes : 0;
 
   return (
-    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-5 sm:p-6">
-      <h3 className="mb-4 text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-4 sm:p-6">
+      <h3 className="mb-3 text-[11px] font-medium uppercase tracking-widest text-zinc-600 sm:mb-4">
         File Types
       </h3>
 
       {visible.length === 0 ? (
         <p className="text-sm text-zinc-600">No type data available</p>
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {visible.map((t, i) => {
             const pct = maxBytes > 0 ? (t.totalBytes / maxBytes) * 100 : 0;
             return (
               <div key={t.extension} className="flex items-center gap-2 sm:gap-3">
-                <span className="w-12 shrink-0 text-right font-mono text-[11px] text-zinc-400 sm:w-20 sm:text-[12px]">
+                <span className="w-10 shrink-0 text-right font-mono text-[10px] text-zinc-400 sm:w-20 sm:text-[12px]">
                   .{t.extension}
                 </span>
-                <div className="h-3.5 flex-1 overflow-hidden rounded-full bg-zinc-800/40 sm:h-4">
+                <div className="h-3 flex-1 overflow-hidden rounded-full bg-zinc-800/40 sm:h-4">
                   <div
                     className={cn(
                       "h-full rounded-full transition-all",
@@ -51,14 +51,12 @@ export function TypeBreakdown({ types }: Props) {
                     style={{ width: `${Math.max(pct, 1)}%` }}
                   />
                 </div>
-                <div className="flex w-20 shrink-0 flex-col items-end sm:w-36 sm:flex-row sm:items-baseline sm:gap-2">
-                  <span className="font-mono text-[11px] text-zinc-400 sm:text-[12px]">
-                    {formatBytes(t.totalBytes)}
-                  </span>
-                  <span className="hidden font-mono text-[10px] text-zinc-700 sm:inline">
-                    {t.count} file{t.count !== 1 ? "s" : ""}
-                  </span>
-                </div>
+                <span className="w-16 shrink-0 text-right font-mono text-[10px] text-zinc-400 sm:w-20 sm:text-[12px]">
+                  {formatBytes(t.totalBytes)}
+                </span>
+                <span className="hidden w-16 shrink-0 text-right font-mono text-[10px] text-zinc-700 sm:inline">
+                  {t.count} file{t.count !== 1 ? "s" : ""}
+                </span>
               </div>
             );
           })}

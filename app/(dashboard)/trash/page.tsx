@@ -11,7 +11,7 @@ export default async function TrashPage() {
     <>
       <PageHeader
         title="Trash"
-        description="Items moved here are not permanently deleted"
+        description="Deleted items can be restored or permanently removed"
       />
       <TrashBrowser items={items} />
     </>

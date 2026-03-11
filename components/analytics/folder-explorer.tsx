@@ -60,15 +60,15 @@ export function FolderExplorer({ folders }: Props) {
   if (drill) {
     const drillTotal = drill.children.reduce((s, c) => s + c.sizeBytes, 0);
     return (
-      <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-5 sm:p-6">
-        <div className="mb-4 flex items-center gap-2">
+      <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-4 sm:p-6">
+        <div className="mb-3 flex items-center gap-2 sm:mb-4">
           <button
             onClick={handleBack}
             className="rounded px-2 py-1 font-mono text-[11px] text-zinc-500 transition-colors hover:bg-zinc-800/30 hover:text-zinc-300"
           >
             &larr; Back
           </button>
-          <span className="font-mono text-[11px] text-zinc-600">
+          <span className="min-w-0 truncate font-mono text-[11px] text-zinc-600">
             /{breadcrumb.join("/")}
           </span>
         </div>
@@ -80,7 +80,7 @@ export function FolderExplorer({ folders }: Props) {
         ) : drill.children.length === 0 ? (
           <p className="py-4 text-center text-sm text-zinc-600">Empty directory</p>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {drill.children.map((child) => {
               const pct =
                 drillTotal > 0
@@ -89,7 +89,7 @@ export function FolderExplorer({ folders }: Props) {
               return (
                 <div
                   key={child.path}
-                  className="group flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-zinc-800/30"
+                  className="group flex items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-zinc-800/30 sm:gap-3 sm:py-1.5"
                 >
                   {child.isDirectory ? (
                     <Folder className="h-4 w-4 shrink-0 text-blue-400/70" />
@@ -102,17 +102,22 @@ export function FolderExplorer({ folders }: Props) {
                         onClick={() =>
                           handleDrillDown(child.path, child.name)
                         }
-                        className="block truncate text-left font-mono text-[13px] text-zinc-300 transition-colors group-hover:text-emerald-400"
+                        className="block max-w-full truncate text-left font-mono text-[12px] text-zinc-300 transition-colors group-hover:text-emerald-400 sm:text-[13px]"
                       >
                         {child.name}
                       </button>
                     ) : (
-                      <span className="block truncate font-mono text-[13px] text-zinc-400">
+                      <span className="block truncate font-mono text-[12px] text-zinc-400 sm:text-[13px]">
                         {child.name}
                       </span>
                     )}
+                    {/* Mobile: show size inline below name */}
+                    <span className="mt-0.5 block font-mono text-[10px] text-zinc-600 sm:hidden">
+                      {formatBytes(child.sizeBytes)} · {pct}%
+                    </span>
                   </div>
-                  <div className="flex shrink-0 items-baseline gap-2">
+                  {/* Desktop: size + pct + chevron */}
+                  <div className="hidden shrink-0 items-baseline gap-2 sm:flex">
                     <span className="font-mono text-[12px] text-zinc-400">
                       {formatBytes(child.sizeBytes)}
                     </span>
@@ -123,6 +128,10 @@ export function FolderExplorer({ folders }: Props) {
                       <ChevronRight className="h-3.5 w-3.5 text-zinc-700 transition-colors group-hover:text-zinc-400" />
                     )}
                   </div>
+                  {/* Mobile: just chevron for folders */}
+                  {child.isDirectory && (
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-zinc-700 sm:hidden" />
+                  )}
                 </div>
               );
             })}
@@ -133,15 +142,15 @@ export function FolderExplorer({ folders }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-5 sm:p-6">
-      <h3 className="mb-4 text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-4 sm:p-6">
+      <h3 className="mb-3 text-[11px] font-medium uppercase tracking-widest text-zinc-600 sm:mb-4">
         Folders
       </h3>
 
       {folders.length === 0 ? (
         <p className="text-sm text-zinc-600">No folders found</p>
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           {folders.map((folder) => {
             const pct =
               totalSize > 0
@@ -150,7 +159,7 @@ export function FolderExplorer({ folders }: Props) {
             return (
               <div
                 key={folder.path}
-                className="group flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-zinc-800/30"
+                className="group flex items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-zinc-800/30 sm:gap-3 sm:py-1.5"
               >
                 <Folder className="h-4 w-4 shrink-0 text-blue-400/70" />
                 <div className="min-w-0 flex-1">
@@ -158,17 +167,23 @@ export function FolderExplorer({ folders }: Props) {
                     onClick={() =>
                       handleDrillDown(folder.path, folder.name)
                     }
-                    className="block truncate text-left font-mono text-[13px] text-zinc-300 transition-colors group-hover:text-emerald-400"
+                    className="block max-w-full truncate text-left font-mono text-[12px] text-zinc-300 transition-colors group-hover:text-emerald-400 sm:text-[13px]"
                   >
                     {folder.name}
                   </button>
-                  <span className="block font-mono text-[10px] text-zinc-700">
+                  {/* Mobile: size + counts inline */}
+                  <span className="mt-0.5 block font-mono text-[10px] text-zinc-600 sm:hidden">
+                    {formatBytes(folder.sizeBytes)} · {pct}% · {folder.fileCount.toLocaleString()} files
+                  </span>
+                  {/* Desktop: file/folder counts */}
+                  <span className="hidden font-mono text-[10px] text-zinc-700 sm:block">
                     {folder.fileCount.toLocaleString()} files
                     {folder.folderCount > 0 &&
                       ` · ${folder.folderCount.toLocaleString()} folders`}
                   </span>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-0.5">
+                {/* Desktop: size + bar + pct + chevron */}
+                <div className="hidden shrink-0 flex-col items-end gap-0.5 sm:flex">
                   <div className="flex items-baseline gap-2">
                     <span className="font-mono text-[12px] text-zinc-400">
                       {formatBytes(folder.sizeBytes)}
@@ -192,7 +207,7 @@ export function FolderExplorer({ folders }: Props) {
       )}
 
       {folders.length > 0 && (
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-3 flex items-center gap-3 sm:mt-4">
           <Link
             href="/files"
             className="font-mono text-[11px] text-zinc-500 transition-colors hover:text-emerald-400"

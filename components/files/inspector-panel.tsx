@@ -293,7 +293,7 @@ export function InspectorPanel({
                     className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] text-zinc-400 transition-colors hover:bg-zinc-800/40 hover:text-zinc-200"
                   >
                     <Clock className="h-3.5 w-3.5" />
-                    Versions
+                    Version History
                   </button>
                 )}
                 {onDelete && (
@@ -302,7 +302,7 @@ export function InspectorPanel({
                     className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] text-red-400/70 transition-colors hover:bg-red-500/5 hover:text-red-400"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    Trash
+                    Move to Trash
                   </button>
                 )}
               </div>

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { BACKEND_URL } from "@/lib/backend";
 import { mockSearch } from "@/lib/mock-data";
 
-const USE_MOCK = process.env.USE_MOCK !== "false";
+const USE_MOCK = process.env.USE_MOCK === "true";
 
 export async function GET(req: NextRequest) {
   const query = req.nextUrl.searchParams.get("query") ?? "";
@@ -19,6 +19,6 @@ export async function GET(req: NextRequest) {
     const data = await upstream.json();
     return Response.json(data, { status: upstream.status });
   } catch {
-    return Response.json([]);
+    return Response.json({ error: "Backend unavailable" }, { status: 503 });
   }
 }

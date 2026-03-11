@@ -1,7 +1,7 @@
 import { BACKEND_URL } from "@/lib/backend";
 import { mockGetMetrics } from "@/lib/mock-data";
 
-const USE_MOCK = process.env.USE_MOCK !== "false";
+const USE_MOCK = process.env.USE_MOCK === "true";
 
 export async function GET() {
   if (USE_MOCK) {

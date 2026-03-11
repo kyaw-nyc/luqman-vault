@@ -45,6 +45,7 @@ export default async function SmartViewPage({ params }: PageProps) {
   }
 
   let files: unknown[] = [];
+  let fetchError = false;
   try {
     const res = await fetch(
       `${BACKEND_URL}/api/smart-view?type=${encodeURIComponent(slug)}`,
@@ -52,13 +53,25 @@ export default async function SmartViewPage({ params }: PageProps) {
     );
     if (res.ok) {
       files = await res.json();
+    } else {
+      fetchError = true;
     }
-  } catch { /* fallback to empty */ }
+  } catch {
+    fetchError = true;
+  }
 
   return (
     <>
       <PageHeader title={meta.title} description={meta.description} />
-      <SmartViewBrowser files={files as never[]} viewType={slug} />
+      {fetchError && files.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-red-500/20 py-24">
+          <p className="text-[13px] text-red-400/70">
+            Could not load data — backend may be unreachable
+          </p>
+        </div>
+      ) : (
+        <SmartViewBrowser files={files as never[]} viewType={slug} />
+      )}
     </>
   );
 }
