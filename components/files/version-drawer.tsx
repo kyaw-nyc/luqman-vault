@@ -194,7 +194,10 @@ export function VersionDrawer({ filePath, fileName, open, onClose }: Props) {
         </div>
 
         {/* Footer note */}
-        <div className="border-t border-zinc-800/40 px-5 py-3">
+        <div
+          className="border-t border-zinc-800/40 px-5 py-3"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        >
           <p className="text-center text-[10px] text-zinc-700">
             Restoring a version creates a new backup of the current file first
           </p>

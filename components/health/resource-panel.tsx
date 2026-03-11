@@ -22,22 +22,22 @@ export function ResourcePanel({ title, percent, rows }: ResourcePanelProps) {
   const clamped = Math.min(Math.max(percent, 0), 100);
 
   return (
-    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-6">
-      <p className="mb-3 text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-4 sm:p-6">
+      <p className="mb-2 text-[10px] font-medium uppercase tracking-widest text-zinc-600 sm:mb-3 sm:text-[11px]">
         {title}
       </p>
 
       {/* Big percentage */}
-      <p className="mb-4 leading-none">
+      <p className="mb-3 leading-none sm:mb-4">
         <span
           className={cn(
-            "font-mono text-[44px] font-light tabular-nums",
+            "font-mono text-[36px] font-light tabular-nums sm:text-[44px]",
             numColor(clamped),
           )}
         >
           {clamped.toFixed(1)}
         </span>
-        <span className="font-mono text-[20px] text-zinc-700">%</span>
+        <span className="font-mono text-[16px] text-zinc-700 sm:text-[20px]">%</span>
       </p>
 
       {/* Bar */}

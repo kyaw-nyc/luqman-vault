@@ -4,9 +4,9 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 
 export function StorageCard({ stats }: { stats: StorageStats }) {
   return (
-    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-6">
-      <div className="mb-5 flex items-center justify-between">
-        <h3 className="text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-4 sm:p-6">
+      <div className="mb-4 flex items-center justify-between sm:mb-5">
+        <h3 className="text-[10px] font-medium uppercase tracking-widest text-zinc-600 sm:text-[11px]">
           Storage Overview
         </h3>
         <span className="font-mono text-[11px] text-zinc-700">

@@ -11,16 +11,18 @@ export function PageHeader({
     <div
       className={
         right
-          ? "mb-10 flex items-end justify-between gap-4"
-          : "mb-10"
+          ? "mb-6 flex flex-col gap-3 sm:mb-10 sm:flex-row sm:items-end sm:justify-between sm:gap-4"
+          : "mb-6 sm:mb-10"
       }
     >
-      <div>
-        <h1 className="text-[22px] font-semibold tracking-tight text-zinc-50">
+      <div className="min-w-0">
+        <h1 className="text-[20px] font-semibold tracking-tight text-zinc-50 sm:text-[22px]">
           {title}
         </h1>
         {description && (
-          <p className="mt-1.5 text-[13px] text-zinc-500">{description}</p>
+          <p className="mt-1 text-[12px] text-zinc-500 sm:mt-1.5 sm:text-[13px]">
+            {description}
+          </p>
         )}
       </div>
       {right}

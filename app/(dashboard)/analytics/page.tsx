@@ -73,20 +73,24 @@ export default async function AnalyticsPage() {
       </div>
 
       {/* Storage map */}
-      <StorageMap
-        folders={analytics.folders}
-        totalSizeBytes={analytics.totalSizeBytes}
-        diskTotalBytes={analytics.diskTotalBytes}
-      />
+      <div className="mt-4 sm:mt-6">
+        <StorageMap
+          folders={analytics.folders}
+          totalSizeBytes={analytics.totalSizeBytes}
+          diskTotalBytes={analytics.diskTotalBytes}
+        />
+      </div>
 
       {/* Folder explorer + Largest files */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4 sm:mt-6 lg:grid-cols-2">
         <FolderExplorer folders={analytics.folders} />
         <LargestFiles files={analytics.largestFiles} />
       </div>
 
       {/* Type breakdown */}
-      <TypeBreakdown types={analytics.typeBreakdown} />
+      <div className="mt-4 sm:mt-6">
+        <TypeBreakdown types={analytics.typeBreakdown} />
+      </div>
     </>
   );
 }

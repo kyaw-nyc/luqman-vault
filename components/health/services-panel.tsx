@@ -81,7 +81,7 @@ export function ServicesPanel({ health }: ServicesPanelProps) {
             <div
               key={service.serviceName}
               className={cn(
-                "group rounded-xl border border-zinc-800/40 border-l-2 bg-zinc-900/40 p-5 transition-colors hover:border-zinc-700/40",
+                "group rounded-xl border border-zinc-800/40 border-l-2 bg-zinc-900/40 p-4 transition-colors hover:border-zinc-700/40 sm:p-5",
                 statusBorder[service.status],
               )}
             >

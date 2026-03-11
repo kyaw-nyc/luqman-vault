@@ -77,9 +77,10 @@ export function Lightbox({
       {/* Top bar */}
       <div
         className={cn(
-          "flex shrink-0 items-center justify-between px-4 py-3 transition-opacity duration-200",
+          "flex shrink-0 items-center justify-between px-4 py-2 transition-opacity duration-200 sm:py-3",
           showInfo ? "opacity-100" : "opacity-0 hover:opacity-100",
         )}
+        style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
       >
         <div className="min-w-0 flex-1">
           <p className="truncate font-mono text-[13px] text-zinc-300">
@@ -178,9 +179,10 @@ export function Lightbox({
       {images.length > 1 && images.length <= 20 && (
         <div
           className={cn(
-            "flex shrink-0 justify-center gap-1.5 py-3 sm:hidden transition-opacity duration-200",
+            "flex shrink-0 justify-center gap-1.5 py-2 sm:hidden transition-opacity duration-200",
             showInfo ? "opacity-100" : "opacity-0",
           )}
+          style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
         >
           {images.map((_, i) => (
             <button

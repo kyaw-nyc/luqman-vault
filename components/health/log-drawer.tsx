@@ -73,7 +73,7 @@ export function LogDrawer({ serviceName, onClose }: LogDrawerProps) {
         onClick={onClose}
       />
 
-      <div className="relative flex w-full max-w-2xl flex-col border-l border-zinc-800/60 bg-zinc-950 shadow-2xl">
+      <div className="relative flex w-full flex-col border-l border-zinc-800/60 bg-zinc-950 shadow-2xl sm:max-w-2xl">
         {/* Sticky header */}
         <div className="sticky top-0 z-10 flex flex-col gap-3 border-b border-zinc-800/40 bg-zinc-950 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
           <div className="min-w-0">

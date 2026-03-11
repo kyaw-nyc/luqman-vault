@@ -109,15 +109,23 @@ export function SmartViewBrowser({ files, viewType }: Props) {
                 key={file.path}
                 className="group transition-colors hover:bg-zinc-800/20"
               >
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
+                <td className="px-3 py-2.5 sm:px-4 sm:py-3">
+                  <div className="flex items-center gap-2.5 sm:gap-3">
                     <FileIcon name={file.name} isDirectory={file.isDirectory} />
                     <div className="min-w-0">
                       <span className="block truncate text-[13px] text-zinc-300">
                         {file.name}
                       </span>
+                      <span className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] text-zinc-700 sm:hidden">
+                        {formatBytes(file.size)}
+                        {file.versionCount !== undefined && file.versionCount > 0 && (
+                          <span className="text-amber-500/70">
+                            · {file.versionCount}v
+                          </span>
+                        )}
+                      </span>
                       {file.versionCount !== undefined && file.versionCount > 0 && (
-                        <span className="font-mono text-[10px] text-amber-500/70">
+                        <span className="hidden font-mono text-[10px] text-amber-500/70 sm:inline">
                           {file.versionCount} version{file.versionCount !== 1 ? "s" : ""}
                         </span>
                       )}

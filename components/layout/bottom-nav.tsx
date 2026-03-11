@@ -6,10 +6,10 @@ import { LayoutDashboard, FolderOpen, Activity, BarChart3, TerminalSquare } from
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, accent: "emerald" as const },
+  { href: "/dashboard", label: "Home",      icon: LayoutDashboard, accent: "emerald" as const },
   { href: "/files",     label: "Files",     icon: FolderOpen,      accent: "emerald" as const },
   { href: "/health",    label: "Health",    icon: Activity,        accent: "emerald" as const },
-  { href: "/analytics", label: "Analytics", icon: BarChart3,       accent: "emerald" as const },
+  { href: "/analytics", label: "Storage",   icon: BarChart3,       accent: "emerald" as const },
   { href: "/terminal",  label: "Terminal",  icon: TerminalSquare,  accent: "amber"   as const },
 ];
 
@@ -29,7 +29,7 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex flex-1 flex-col items-center gap-1 py-3 text-center transition-colors"
+              className="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-center transition-colors"
             >
               <item.icon
                 className={cn(

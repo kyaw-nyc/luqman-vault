@@ -36,8 +36,8 @@ export function ActivityCard({ activity }: { activity: RecentActivity[] }) {
   }
 
   return (
-    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-6">
-      <h3 className="mb-5 text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-4 sm:p-6">
+      <h3 className="mb-4 text-[10px] font-medium uppercase tracking-widest text-zinc-600 sm:mb-5 sm:text-[11px]">
         Recent Activity
       </h3>
 
@@ -48,7 +48,7 @@ export function ActivityCard({ activity }: { activity: RecentActivity[] }) {
           return (
             <div
               key={i}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-zinc-800/25"
+              className="flex items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-zinc-800/25 sm:gap-3 sm:px-3 sm:py-2.5"
             >
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-800/50">
                 <Icon className={`h-3.5 w-3.5 ${cfg.color}`} />
@@ -58,11 +58,11 @@ export function ActivityCard({ activity }: { activity: RecentActivity[] }) {
                   <span className="font-medium text-zinc-200">{item.fileName}</span>{" "}
                   <span className="text-zinc-600">{cfg.label}</span>
                 </p>
-                <p className="truncate font-mono text-[11px] text-zinc-700">
+                <p className="truncate font-mono text-[10px] text-zinc-700 sm:text-[11px]">
                   {item.path}
                 </p>
               </div>
-              <span className="shrink-0 font-mono text-[11px] text-zinc-700">
+              <span className="hidden shrink-0 font-mono text-[11px] text-zinc-700 sm:inline">
                 {formatRelativeTime(item.timestamp)}
               </span>
             </div>

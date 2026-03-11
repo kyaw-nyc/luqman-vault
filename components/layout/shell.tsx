@@ -9,7 +9,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <CommandPalette />
       <BottomNav />
       <main className="min-h-screen md:ml-[260px]">
-        <div className="mx-auto max-w-[1200px] px-5 py-6 pb-28 md:px-10 md:py-10 md:pb-10">
+        <div
+          className="mx-auto max-w-[1200px] px-4 py-5 pb-24 sm:px-5 md:px-10 md:py-10 md:pb-10"
+          style={{ paddingTop: "max(1.25rem, env(safe-area-inset-top))" }}
+        >
           {children}
         </div>
       </main>

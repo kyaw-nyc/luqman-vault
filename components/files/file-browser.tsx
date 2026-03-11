@@ -716,161 +716,158 @@ export function FileBrowser({
 
         {/* Controls row — normal mode */}
         {!isSearchMode && (
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            {/* Left: sort/filter (desktop only) + count */}
-            <div className="flex items-center gap-2">
-              {/* Sort + filter — hidden on mobile */}
-              <div className="hidden items-center gap-2 sm:flex">
-                {/* Sort key */}
-                <div className="relative">
-                  <select
-                    value={sortKey}
-                    onChange={(e) => {
-                      setSortKey(e.target.value as SortKey);
-                      setSortDir("asc");
-                    }}
-                    className="appearance-none rounded-md border border-zinc-800/50 bg-zinc-900/40 py-1.5 pl-3 pr-7 text-[12px] text-zinc-400 outline-none transition-colors hover:border-zinc-700/60 focus:border-zinc-700/60"
-                  >
-                    <option value="name">Name</option>
-                    <option value="size">Size</option>
-                    <option value="modified">Modified</option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-700" />
-                </div>
-
-                {/* Sort direction toggle */}
-                <button
-                  onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-                  className="rounded-md border border-zinc-800/50 bg-zinc-900/40 p-1.5 text-zinc-600 transition-colors hover:border-zinc-700/60 hover:text-zinc-400"
-                  title={sortDir === "asc" ? "Ascending" : "Descending"}
-                >
-                  <SortIcon col={sortKey} />
-                </button>
-
-                {/* Extension filter */}
-                {extensions.length > 0 && (
-                  <div className="relative">
-                    <select
-                      value={extFilter}
-                      onChange={(e) => setExtFilter(e.target.value)}
-                      className="appearance-none rounded-md border border-zinc-800/50 bg-zinc-900/40 py-1.5 pl-3 pr-7 text-[12px] text-zinc-400 outline-none transition-colors hover:border-zinc-700/60 focus:border-zinc-700/60"
-                    >
-                      <option value="all">All types</option>
-                      {extensions.map((ext) => (
-                        <option key={ext} value={ext}>
-                          .{ext}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-700" />
-                  </div>
-                )}
-              </div>
-
-              {/* Count hint — always visible */}
-              <span className="font-mono text-[11px] text-zinc-700">
+          <div className="space-y-2">
+            {/* Row 1: count + primary actions */}
+            <div className="flex items-center justify-between gap-2">
+              {/* Left: count hint */}
+              <span className="shrink-0 font-mono text-[11px] text-zinc-700">
                 {extFilter !== "all"
                   ? `${displayed.length} result${displayed.length !== 1 ? "s" : ""}`
-                  : `${dirCount > 0 ? `${dirCount} folder${dirCount !== 1 ? "s" : ""}` : ""}${dirCount > 0 && fileCount > 0 ? "  ·  " : ""}${fileCount > 0 ? `${fileCount} file${fileCount !== 1 ? "s" : ""}` : ""}`}
+                  : `${dirCount > 0 ? `${dirCount} folder${dirCount !== 1 ? "s" : ""}` : ""}${dirCount > 0 && fileCount > 0 ? " · " : ""}${fileCount > 0 ? `${fileCount} file${fileCount !== 1 ? "s" : ""}` : ""}`}
               </span>
-            </div>
 
-            {/* Right: view toggle + upload + new folder */}
-            <div className="flex items-center gap-2">
-              {/* Mobile: enter / exit selection mode */}
-              {displayed.length > 0 && (
-                <button
-                  onClick={() => isSelecting ? clearSelection() : setSelectMode(true)}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] transition-all sm:hidden",
-                    isSelecting
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                      : "border-zinc-800/50 bg-zinc-900/40 text-zinc-500",
-                  )}
-                >
-                  <CheckSquare className="h-4 w-4" />
-                  <span>{isSelecting ? "Done" : "Select"}</span>
-                </button>
-              )}
-
-              {/* View toggle */}
-              <div className="flex rounded-md border border-zinc-800/50 bg-zinc-900/40 p-0.5">
-                <button
-                  onClick={() => changeViewMode("list")}
-                  className={cn(
-                    "rounded p-2 transition-colors",
-                    viewMode === "list"
-                      ? "bg-zinc-700/60 text-zinc-200"
-                      : "text-zinc-600 hover:text-zinc-400",
-                  )}
-                  title="List view"
-                >
-                  <LayoutList className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => changeViewMode("grid")}
-                  className={cn(
-                    "rounded p-2 transition-colors",
-                    viewMode === "grid"
-                      ? "bg-zinc-700/60 text-zinc-200"
-                      : "text-zinc-600 hover:text-zinc-400",
-                  )}
-                  title="Grid view"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </button>
-                {hasGalleryImages && (
+              {/* Right: compact action buttons */}
+              <div className="flex items-center gap-1.5">
+                {/* Mobile: enter / exit selection mode */}
+                {displayed.length > 0 && (
                   <button
-                    onClick={() => changeViewMode("gallery")}
+                    onClick={() => isSelecting ? clearSelection() : setSelectMode(true)}
                     className={cn(
-                      "rounded p-2 transition-colors",
-                      viewMode === "gallery"
+                      "rounded-md border p-2 transition-all sm:hidden",
+                      isSelecting
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                        : "border-zinc-800/50 bg-zinc-900/40 text-zinc-500",
+                    )}
+                    title={isSelecting ? "Done" : "Select"}
+                  >
+                    <CheckSquare className="h-4 w-4" />
+                  </button>
+                )}
+
+                {/* View toggle */}
+                <div className="flex rounded-md border border-zinc-800/50 bg-zinc-900/40 p-0.5">
+                  <button
+                    onClick={() => changeViewMode("list")}
+                    className={cn(
+                      "rounded p-1.5 transition-colors",
+                      viewMode === "list"
                         ? "bg-zinc-700/60 text-zinc-200"
                         : "text-zinc-600 hover:text-zinc-400",
                     )}
-                    title="Gallery view"
+                    title="List view"
                   >
-                    <GalleryHorizontalEnd className="h-4 w-4" />
+                    <LayoutList className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => changeViewMode("grid")}
+                    className={cn(
+                      "rounded p-1.5 transition-colors",
+                      viewMode === "grid"
+                        ? "bg-zinc-700/60 text-zinc-200"
+                        : "text-zinc-600 hover:text-zinc-400",
+                    )}
+                    title="Grid view"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </button>
+                  {hasGalleryImages && (
+                    <button
+                      onClick={() => changeViewMode("gallery")}
+                      className={cn(
+                        "rounded p-1.5 transition-colors",
+                        viewMode === "gallery"
+                          ? "bg-zinc-700/60 text-zinc-200"
+                          : "text-zinc-600 hover:text-zinc-400",
+                      )}
+                      title="Gallery view"
+                    >
+                      <GalleryHorizontalEnd className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Upload */}
+                <button
+                  onClick={() => uploadInputRef.current?.click()}
+                  className="rounded-md border border-zinc-800/50 bg-zinc-900/40 p-2 text-zinc-500 transition-all hover:border-zinc-700/60 hover:text-zinc-300 sm:px-3"
+                  title="Upload"
+                >
+                  <Upload className="h-4 w-4" />
+                </button>
+
+                {/* New folder */}
+                <button
+                  onClick={() => openDialog({ type: "mkdir" })}
+                  className="rounded-md border border-zinc-800/50 bg-zinc-900/40 p-2 text-zinc-500 transition-all hover:border-zinc-700/60 hover:text-zinc-300 sm:px-3"
+                  title="New folder"
+                >
+                  <FolderPlus className="h-4 w-4" />
+                </button>
+
+                {/* Pin — only when not at root */}
+                {currentPath !== "/" && (
+                  <button
+                    onClick={() =>
+                      isPinned(currentPath)
+                        ? removePin(currentPath)
+                        : addPin(currentPath)
+                    }
+                    className={cn(
+                      "rounded-md border p-2 transition-all",
+                      isPinned(currentPath)
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:border-emerald-500/50"
+                        : "border-zinc-800/50 bg-zinc-900/40 text-zinc-500 hover:border-zinc-700/60 hover:text-zinc-300",
+                    )}
+                    title={isPinned(currentPath) ? "Unpin" : "Pin"}
+                  >
+                    <Bookmark className="h-4 w-4" />
                   </button>
                 )}
               </div>
+            </div>
 
-              {/* Upload button */}
-              <button
-                onClick={() => uploadInputRef.current?.click()}
-                className="flex items-center gap-2 rounded-md border border-zinc-800/50 bg-zinc-900/40 px-3 py-2 text-[12px] text-zinc-500 transition-all hover:border-zinc-700/60 hover:text-zinc-300"
-              >
-                <Upload className="h-4 w-4" />
-                <span className="hidden sm:inline">Upload</span>
-              </button>
-
-              {/* New folder */}
-              <button
-                onClick={() => openDialog({ type: "mkdir" })}
-                className="flex items-center gap-2 rounded-md border border-zinc-800/50 bg-zinc-900/40 px-3 py-2 text-[12px] text-zinc-500 transition-all hover:border-zinc-700/60 hover:text-zinc-300"
-              >
-                <FolderPlus className="h-4 w-4" />
-                <span className="hidden sm:inline">New folder</span>
-              </button>
-
-              {/* Pin button — only when not at root */}
-              {currentPath !== "/" && (
-                <button
-                  onClick={() =>
-                    isPinned(currentPath)
-                      ? removePin(currentPath)
-                      : addPin(currentPath)
-                  }
-                  className={cn(
-                    "flex items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition-all",
-                    isPinned(currentPath)
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:border-emerald-500/50"
-                      : "border-zinc-800/50 bg-zinc-900/40 text-zinc-500 hover:border-zinc-700/60 hover:text-zinc-300",
-                  )}
-                  title={isPinned(currentPath) ? "Remove pin" : "Pin this folder"}
+            {/* Row 2: sort/filter (desktop only) */}
+            <div className="hidden items-center gap-2 sm:flex">
+              <div className="relative">
+                <select
+                  value={sortKey}
+                  onChange={(e) => {
+                    setSortKey(e.target.value as SortKey);
+                    setSortDir("asc");
+                  }}
+                  className="appearance-none rounded-md border border-zinc-800/50 bg-zinc-900/40 py-1.5 pl-3 pr-7 text-[12px] text-zinc-400 outline-none transition-colors hover:border-zinc-700/60 focus:border-zinc-700/60"
                 >
-                  <Bookmark className="h-4 w-4" />
-                </button>
+                  <option value="name">Name</option>
+                  <option value="size">Size</option>
+                  <option value="modified">Modified</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-700" />
+              </div>
+
+              <button
+                onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                className="rounded-md border border-zinc-800/50 bg-zinc-900/40 p-1.5 text-zinc-600 transition-colors hover:border-zinc-700/60 hover:text-zinc-400"
+                title={sortDir === "asc" ? "Ascending" : "Descending"}
+              >
+                <SortIcon col={sortKey} />
+              </button>
+
+              {extensions.length > 0 && (
+                <div className="relative">
+                  <select
+                    value={extFilter}
+                    onChange={(e) => setExtFilter(e.target.value)}
+                    className="appearance-none rounded-md border border-zinc-800/50 bg-zinc-900/40 py-1.5 pl-3 pr-7 text-[12px] text-zinc-400 outline-none transition-colors hover:border-zinc-700/60 focus:border-zinc-700/60"
+                  >
+                    <option value="all">All types</option>
+                    {extensions.map((ext) => (
+                      <option key={ext} value={ext}>
+                        .{ext}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-700" />
+                </div>
               )}
             </div>
           </div>
@@ -878,24 +875,32 @@ export function FileBrowser({
 
         {/* Controls row — search mode */}
         {isSearchMode && (
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="font-mono text-[11px] text-zinc-700">
-              {searchLoading
-                ? "Searching…"
-                : searchResults === null
-                  ? ""
-                  : `${searchResults.length} result${searchResults.length !== 1 ? "s" : ""} in ${currentPath === "/" ? "all folders" : currentPath}`}
-            </span>
-            <div className="flex items-center gap-2">
-              {/* Grouping toggle — only when there are results */}
-              {!searchLoading && searchResults !== null && searchResults.length > 0 && (
-                <div className="flex items-center rounded-md border border-zinc-800/50 bg-zinc-900/40 p-0.5">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-[11px] text-zinc-700">
+                {searchLoading
+                  ? "Searching…"
+                  : searchResults === null
+                    ? ""
+                    : `${searchResults.length} result${searchResults.length !== 1 ? "s" : ""}`}
+              </span>
+              <button
+                onClick={() => openDialog({ type: "mkdir" })}
+                className="rounded-md border border-zinc-800/50 bg-zinc-900/40 p-2 text-zinc-500 transition-all hover:border-zinc-700/60 hover:text-zinc-300 sm:px-3"
+                title="New folder"
+              >
+                <FolderPlus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            {!searchLoading && searchResults !== null && searchResults.length > 0 && (
+              <div className="overflow-x-auto scrollbar-none">
+                <div className="inline-flex items-center rounded-md border border-zinc-800/50 bg-zinc-900/40 p-0.5">
                   {(["flat", "folder", "type", "recent"] as GroupBy[]).map((g) => (
                     <button
                       key={g}
                       onClick={() => setGroupBy(g)}
                       className={cn(
-                        "rounded px-2.5 py-1 text-[11px] transition-colors",
+                        "rounded px-2.5 py-1 text-[11px] transition-colors whitespace-nowrap",
                         groupBy === g
                           ? "bg-zinc-700/60 text-zinc-200"
                           : "text-zinc-600 hover:text-zinc-400",
@@ -905,15 +910,8 @@ export function FileBrowser({
                     </button>
                   ))}
                 </div>
-              )}
-              <button
-                onClick={() => openDialog({ type: "mkdir" })}
-                className="flex items-center gap-2 rounded-md border border-zinc-800/50 bg-zinc-900/40 px-3 py-1.5 text-[12px] text-zinc-500 transition-all hover:border-zinc-700/60 hover:text-zinc-300"
-              >
-                <FolderPlus className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">New folder</span>
-              </button>
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1053,7 +1051,7 @@ export function FileBrowser({
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-zinc-800/40 bg-zinc-900/30">
-                    <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+                    <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase tracking-widest text-zinc-600 sm:px-5 sm:py-3 sm:text-[11px]">
                       Name
                     </th>
                     <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-widest text-zinc-600 max-sm:hidden">
@@ -1065,7 +1063,7 @@ export function FileBrowser({
                     <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-widest text-zinc-600 max-sm:hidden">
                       Type
                     </th>
-                    <th className="w-24 px-5 py-3" />
+                    <th className="w-16 px-2 py-2.5 sm:w-24 sm:px-5 sm:py-3" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/20">
@@ -1076,27 +1074,27 @@ export function FileBrowser({
                         key={file.path}
                         className="group relative transition-colors hover:bg-zinc-800/20"
                       >
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
+                        <td className="px-3 py-3 sm:px-5 sm:py-4">
+                          <div className="flex items-center gap-2.5 sm:gap-3">
                             <FileIcon name={file.name} isDirectory={file.isDirectory} />
                             <div className="min-w-0">
                               {file.isDirectory ? (
                                 <Link
                                   href={`/files?path=${encodeURIComponent(file.path)}`}
-                                  className="block text-[13px] font-medium text-zinc-200 transition-colors hover:text-emerald-400"
+                                  className="block truncate text-[13px] font-medium text-zinc-200 transition-colors hover:text-emerald-400"
                                 >
                                   {file.name}
                                 </Link>
                               ) : (
                                 <button
                                   onClick={() => setPreviewFile(file)}
-                                  className="block text-left text-[13px] text-zinc-400 transition-colors hover:text-emerald-400"
+                                  className="block max-w-full truncate text-left text-[13px] text-zinc-400 transition-colors hover:text-emerald-400"
                                 >
                                   {file.name}
                                 </button>
                               )}
                               {groupBy === "flat" && (
-                                <p className="mt-0.5 truncate font-mono text-[11px] text-zinc-700">
+                                <p className="mt-0.5 truncate font-mono text-[10px] text-zinc-700 sm:text-[11px]">
                                   {file.parentPath}
                                 </p>
                               )}
@@ -1112,7 +1110,7 @@ export function FileBrowser({
                         <td className="px-5 py-4 font-mono text-[12px] text-zinc-600 max-sm:hidden">
                           {file.isDirectory ? "dir" : file.extension?.toLowerCase() || "—"}
                         </td>
-                        <td className="px-5 py-4 text-right">
+                        <td className="px-2 py-3 text-right sm:px-5 sm:py-4">
                           <RowActions file={file} />
                         </td>
                       </tr>
@@ -1372,7 +1370,7 @@ export function FileBrowser({
               <thead>
                 <tr className="border-b border-zinc-800/40 bg-zinc-900/30">
                   <th
-                    className="cursor-pointer px-5 py-3 text-left text-[11px] font-medium uppercase tracking-widest text-zinc-600 transition-colors hover:text-zinc-400"
+                    className="cursor-pointer px-3 py-2.5 text-left text-[10px] font-medium uppercase tracking-widest text-zinc-600 transition-colors hover:text-zinc-400 sm:px-5 sm:py-3 sm:text-[11px]"
                     onClick={() => toggleSort("name")}
                   >
                     <span className="flex items-center gap-1.5">
@@ -1398,7 +1396,7 @@ export function FileBrowser({
                   <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-widest text-zinc-600 max-sm:hidden">
                     Type
                   </th>
-                  <th className="w-24 px-5 py-3" />
+                  <th className="w-16 px-2 py-2.5 sm:w-24 sm:px-5 sm:py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/20">
@@ -1413,9 +1411,8 @@ export function FileBrowser({
                       selectedPaths.has(file.path) && "bg-emerald-500/[0.08] ring-1 ring-inset ring-emerald-500/10",
                     )}
                   >
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        {/* Checkbox */}
+                    <td className="px-3 py-3 sm:px-5 sm:py-4">
+                      <div className="flex items-center gap-2.5 sm:gap-3">
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleSelect(file.path); }}
                           className={cn(
@@ -1431,21 +1428,30 @@ export function FileBrowser({
                           )}
                         </button>
                         <FileIcon name={file.name} isDirectory={file.isDirectory} />
-                        {file.isDirectory ? (
-                          <Link
-                            href={`/files?path=${encodeURIComponent(file.path)}`}
-                            className="text-[13px] font-medium text-zinc-200 transition-colors hover:text-emerald-400"
-                          >
-                            {file.name}
-                          </Link>
-                        ) : (
-                          <button
-                            onClick={() => setPreviewFile(file)}
-                            className="text-left text-[13px] text-zinc-400 transition-colors hover:text-emerald-400"
-                          >
-                            {file.name}
-                          </button>
-                        )}
+                        <div className="min-w-0">
+                          {file.isDirectory ? (
+                            <Link
+                              href={`/files?path=${encodeURIComponent(file.path)}`}
+                              className="block truncate text-[13px] font-medium text-zinc-200 transition-colors hover:text-emerald-400"
+                            >
+                              {file.name}
+                            </Link>
+                          ) : (
+                            <button
+                              onClick={() => setPreviewFile(file)}
+                              className="block max-w-full truncate text-left text-[13px] text-zinc-400 transition-colors hover:text-emerald-400"
+                            >
+                              {file.name}
+                            </button>
+                          )}
+                          <p className="mt-0.5 font-mono text-[10px] text-zinc-700 sm:hidden">
+                            {file.isDirectory ? (
+                              <FolderSizeCell sz={folderSizes[file.path]} />
+                            ) : (
+                              formatBytes(file.size)
+                            )}
+                          </p>
+                        </div>
                       </div>
                     </td>
                     <td className="px-5 py-4 font-mono text-[12px] text-zinc-600 max-sm:hidden">
@@ -1461,7 +1467,7 @@ export function FileBrowser({
                     <td className="px-5 py-4 font-mono text-[12px] text-zinc-600 max-sm:hidden">
                       {file.isDirectory ? "dir" : file.extension?.toLowerCase() || "—"}
                     </td>
-                    <td className="px-5 py-4 text-right">
+                    <td className="px-2 py-3 text-right sm:px-5 sm:py-4">
                       <RowActions file={file} />
                     </td>
                   </tr>

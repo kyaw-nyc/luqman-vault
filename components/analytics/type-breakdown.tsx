@@ -38,11 +38,11 @@ export function TypeBreakdown({ types }: Props) {
           {visible.map((t, i) => {
             const pct = maxBytes > 0 ? (t.totalBytes / maxBytes) * 100 : 0;
             return (
-              <div key={t.extension} className="flex items-center gap-3">
-                <span className="w-16 shrink-0 text-right font-mono text-[12px] text-zinc-400 sm:w-20">
+              <div key={t.extension} className="flex items-center gap-2 sm:gap-3">
+                <span className="w-12 shrink-0 text-right font-mono text-[11px] text-zinc-400 sm:w-20 sm:text-[12px]">
                   .{t.extension}
                 </span>
-                <div className="h-4 flex-1 overflow-hidden rounded-full bg-zinc-800/40">
+                <div className="h-3.5 flex-1 overflow-hidden rounded-full bg-zinc-800/40 sm:h-4">
                   <div
                     className={cn(
                       "h-full rounded-full transition-all",
@@ -51,11 +51,11 @@ export function TypeBreakdown({ types }: Props) {
                     style={{ width: `${Math.max(pct, 1)}%` }}
                   />
                 </div>
-                <div className="flex w-28 shrink-0 items-baseline justify-end gap-2 sm:w-36">
-                  <span className="font-mono text-[12px] text-zinc-400">
+                <div className="flex w-20 shrink-0 flex-col items-end sm:w-36 sm:flex-row sm:items-baseline sm:gap-2">
+                  <span className="font-mono text-[11px] text-zinc-400 sm:text-[12px]">
                     {formatBytes(t.totalBytes)}
                   </span>
-                  <span className="font-mono text-[10px] text-zinc-700">
+                  <span className="hidden font-mono text-[10px] text-zinc-700 sm:inline">
                     {t.count} file{t.count !== 1 ? "s" : ""}
                   </span>
                 </div>

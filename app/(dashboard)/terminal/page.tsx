@@ -81,24 +81,28 @@ export default function TerminalPage() {
   }
 
   return (
-    <div className="-mx-5 -mb-6 -mt-2 flex flex-col md:-mx-10 md:-mb-10 md:-mt-4">
+    <div className="-mx-4 -mb-6 -mt-2 flex flex-col sm:-mx-5 md:-mx-10 md:-mb-10 md:-mt-4">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-zinc-800/40 px-4 py-2.5 md:px-6">
+      <div className="flex items-center justify-between border-b border-zinc-800/40 px-4 py-2 md:px-6 md:py-2.5">
         <div className="flex items-center gap-2">
           <TerminalSquare className="h-4 w-4 text-amber-400" />
           <span className="font-mono text-[12px] font-medium text-zinc-300">
             terminal
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-full border border-amber-500/20 bg-amber-500/5 px-2.5 py-0.5 font-mono text-[10px] font-medium text-amber-400/70">
-            live · advanced
-          </span>
-        </div>
+        <span className="rounded-full border border-amber-500/20 bg-amber-500/5 px-2.5 py-0.5 font-mono text-[10px] font-medium text-amber-400/70">
+          live · advanced
+        </span>
       </div>
 
-      {/* Terminal fills remaining viewport */}
-      <div className="flex-1" style={{ height: "calc(100vh - 110px)" }}>
+      {/* Terminal fills remaining viewport — subtract header, bottom nav, safe areas */}
+      <div
+        className="flex-1"
+        style={{
+          height: "calc(100vh - 110px)",
+          maxHeight: "calc(100dvh - 110px)",
+        }}
+      >
         <TerminalView />
       </div>
     </div>

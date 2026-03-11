@@ -147,14 +147,12 @@ export function InspectorPanel({
       <aside
         className={cn(
           "fixed z-50 flex flex-col border-zinc-800/40 bg-[#0a0b0f] shadow-2xl transition-transform duration-300 ease-out",
-          // Desktop: right panel
           "sm:right-0 sm:top-0 sm:h-full sm:w-80 sm:border-l",
           isOpen ? "sm:translate-x-0" : "sm:translate-x-full",
-          // Mobile: bottom sheet
-          "max-sm:inset-x-0 max-sm:bottom-0 max-sm:rounded-t-2xl max-sm:border-t max-sm:max-h-[85vh]",
+          "max-sm:inset-x-0 max-sm:bottom-0 max-sm:rounded-t-2xl max-sm:border-t max-sm:max-h-[75vh]",
           isOpen ? "max-sm:translate-y-0" : "max-sm:translate-y-full",
         )}
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       >
         {file && (
           <>

@@ -99,7 +99,7 @@ export function TrashBrowser({ items: initial }: { items: TrashItem[] }) {
         <table className="w-full">
           <thead>
             <tr className="border-b border-zinc-800/40 bg-zinc-900/30">
-              <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+              <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase tracking-widest text-zinc-600 sm:px-5 sm:py-3 sm:text-[11px]">
                 Name
               </th>
               <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-widest text-zinc-600 max-sm:hidden">
@@ -111,7 +111,7 @@ export function TrashBrowser({ items: initial }: { items: TrashItem[] }) {
               <th className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-widest text-zinc-600 max-sm:hidden">
                 Deleted
               </th>
-              <th className="w-24 px-5 py-3" />
+              <th className="w-auto px-2 py-2.5 sm:w-24 sm:px-5 sm:py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800/20">
@@ -120,10 +120,17 @@ export function TrashBrowser({ items: initial }: { items: TrashItem[] }) {
                 key={item.id}
                 className="group transition-colors hover:bg-zinc-800/20"
               >
-                <td className="px-5 py-4">
-                  <div className="flex items-center gap-3">
+                <td className="px-3 py-3 sm:px-5 sm:py-4">
+                  <div className="flex items-center gap-2.5 sm:gap-3">
                     <FileIcon name={item.name} isDirectory={item.isDirectory} />
-                    <span className="text-[13px] text-zinc-300">{item.name}</span>
+                    <div className="min-w-0">
+                      <span className="block truncate text-[13px] text-zinc-300">{item.name}</span>
+                      <span className="mt-0.5 block truncate font-mono text-[10px] text-zinc-700 sm:hidden">
+                        {item.isDirectory ? "Folder" : formatBytes(item.size)}
+                        {" · "}
+                        {formatDateCompact(item.trashedAt)}
+                      </span>
+                    </div>
                   </div>
                 </td>
                 <td className="px-5 py-4 font-mono text-[11px] text-zinc-700 max-sm:hidden">
@@ -135,25 +142,24 @@ export function TrashBrowser({ items: initial }: { items: TrashItem[] }) {
                 <td className="px-5 py-4 text-[12px] text-zinc-600 max-sm:hidden">
                   {formatDateCompact(item.trashedAt)}
                 </td>
-                <td className="px-5 py-4">
-                  <div className="flex items-center justify-end gap-1">
+                <td className="px-2 py-3 sm:px-5 sm:py-4">
+                  <div className="flex items-center justify-end gap-0.5 sm:gap-1">
                     <button
                       onClick={() => handleRestore(item)}
                       disabled={busy === item.id}
-                      className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-emerald-400 disabled:opacity-40"
+                      className="inline-flex items-center gap-1 rounded-md px-2 py-2 text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-emerald-400 disabled:opacity-40 sm:gap-1.5 sm:px-2.5"
                       title="Restore to original location"
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
-                      <span className="text-[11px] sm:hidden">Restore</span>
+                      <span className="text-[10px] sm:text-[11px]">Restore</span>
                     </button>
                     <button
                       onClick={() => setConfirmDeleteId(item.id)}
                       disabled={busy === item.id}
-                      className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-zinc-700 transition-colors hover:bg-red-500/5 hover:text-red-400 disabled:opacity-40"
+                      className="inline-flex items-center rounded-md p-2 text-zinc-700 transition-colors hover:bg-red-500/5 hover:text-red-400 disabled:opacity-40"
                       title="Delete permanently"
                     >
                       <X className="h-3.5 w-3.5" />
-                      <span className="text-[11px] sm:hidden">Delete</span>
                     </button>
                   </div>
                 </td>

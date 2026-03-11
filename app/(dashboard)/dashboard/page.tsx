@@ -36,7 +36,7 @@ export default async function DashboardPage() {
         right={<LiveIndicator interval={30_000} serverTimestamp={now} />}
       />
 
-      <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-2.5 sm:mb-8 sm:gap-3 lg:grid-cols-4">
         <StatCard label="Hostname" value={stats.hostname} icon={Server} />
         <StatCard
           label="Total Storage"
@@ -56,12 +56,12 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="mb-5 grid grid-cols-1 gap-4 sm:mb-8 sm:gap-5 lg:grid-cols-2">
         <StorageCard stats={stats} />
         <HealthSummaryCard health={health} />
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="mb-5 grid grid-cols-1 gap-4 sm:mb-8 sm:gap-5 lg:grid-cols-2">
         <ActivityCard activity={activity} />
         <StorageBreakdownCard folders={breakdown} />
       </div>

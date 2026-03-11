@@ -32,11 +32,11 @@ function InfoChip({
   value: string | null;
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-zinc-800/40 bg-zinc-900/30 px-4 py-3">
-      <span className="text-[10px] font-medium uppercase tracking-widest text-zinc-700">
+    <div className="flex flex-col gap-0.5 rounded-lg border border-zinc-800/40 bg-zinc-900/30 px-3 py-2.5 sm:gap-1 sm:px-4 sm:py-3">
+      <span className="text-[9px] font-medium uppercase tracking-widest text-zinc-700 sm:text-[10px]">
         {label}
       </span>
-      <span className="font-mono text-[13px] text-zinc-300">
+      <span className="truncate font-mono text-[12px] text-zinc-300 sm:text-[13px]">
         {value ?? "—"}
       </span>
     </div>
@@ -51,49 +51,51 @@ function ProcessTable({
   processes: ProcessInfo[];
 }) {
   return (
-    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-6">
-      <p className="mb-4 text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+    <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-4 sm:p-6">
+      <p className="mb-3 text-[10px] font-medium uppercase tracking-widest text-zinc-600 sm:mb-4 sm:text-[11px]">
         {title}
       </p>
       {processes.length === 0 ? (
         <p className="text-[13px] text-zinc-700">No data available</p>
       ) : (
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-zinc-800/40">
-              <th className="pb-2 text-left text-[10px] font-medium uppercase tracking-widest text-zinc-700">
-                PID
-              </th>
-              <th className="pb-2 text-left text-[10px] font-medium uppercase tracking-widest text-zinc-700">
-                Name
-              </th>
-              <th className="pb-2 text-right text-[10px] font-medium uppercase tracking-widest text-zinc-700">
-                CPU
-              </th>
-              <th className="pb-2 text-right text-[10px] font-medium uppercase tracking-widest text-zinc-700">
-                Mem
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-800/20">
-            {processes.map((p) => (
-              <tr key={p.pid} className="group">
-                <td className="py-2.5 font-mono text-[11px] text-zinc-700">
-                  {p.pid}
-                </td>
-                <td className="py-2.5 font-mono text-[13px] text-zinc-300 group-first:text-zinc-100">
-                  {p.name}
-                </td>
-                <td className="py-2.5 text-right font-mono text-[12px] text-zinc-400">
-                  {p.cpuPercent.toFixed(1)}%
-                </td>
-                <td className="py-2.5 text-right font-mono text-[12px] text-zinc-400">
-                  {p.memoryPercent.toFixed(1)}%
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-zinc-800/40">
+                <th className="pb-2 text-left text-[10px] font-medium uppercase tracking-widest text-zinc-700 max-sm:hidden">
+                  PID
+                </th>
+                <th className="pb-2 text-left text-[10px] font-medium uppercase tracking-widest text-zinc-700">
+                  Name
+                </th>
+                <th className="pb-2 text-right text-[10px] font-medium uppercase tracking-widest text-zinc-700">
+                  CPU
+                </th>
+                <th className="pb-2 text-right text-[10px] font-medium uppercase tracking-widest text-zinc-700">
+                  Mem
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-zinc-800/20">
+              {processes.map((p) => (
+                <tr key={p.pid} className="group">
+                  <td className="py-2 font-mono text-[11px] text-zinc-700 max-sm:hidden sm:py-2.5">
+                    {p.pid}
+                  </td>
+                  <td className="max-w-[140px] truncate py-2 font-mono text-[12px] text-zinc-300 group-first:text-zinc-100 sm:max-w-none sm:py-2.5 sm:text-[13px]">
+                    {p.name}
+                  </td>
+                  <td className="py-2 text-right font-mono text-[11px] text-zinc-400 sm:py-2.5 sm:text-[12px]">
+                    {p.cpuPercent.toFixed(1)}%
+                  </td>
+                  <td className="py-2 text-right font-mono text-[11px] text-zinc-400 sm:py-2.5 sm:text-[12px]">
+                    {p.memoryPercent.toFixed(1)}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
@@ -130,93 +132,94 @@ export default async function HealthPage() {
       />
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="mb-10 flex items-end justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:mb-10 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight text-zinc-50">
+          <h1 className="text-[20px] font-semibold tracking-tight text-zinc-50 sm:text-[22px]">
             System Health
           </h1>
-          <p className="mt-1.5 text-[13px] text-zinc-500">
+          <p className="mt-1 text-[12px] text-zinc-500 sm:mt-1.5 sm:text-[13px]">
             Real-time server monitoring
           </p>
         </div>
-        <div className="flex flex-col items-end gap-1.5">
+        <div className="flex flex-col items-start gap-1 sm:items-end sm:gap-1.5">
           <LiveIndicator
             interval={10_000}
             serverTimestamp={new Date(metrics.serverTime).getTime()}
           />
-          <p className="font-mono text-[11px] text-zinc-700">server time</p>
-          <p className="font-mono text-[13px] text-zinc-400">{serverTimeStr}</p>
+          <p className="font-mono text-[11px] text-zinc-700">
+            server time · <span className="text-zinc-400">{serverTimeStr}</span>
+          </p>
         </div>
       </div>
 
       {/* ── System Overview ──────────────────────────────────────────────── */}
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-2.5 sm:mb-8 sm:grid-cols-4 sm:gap-3">
         {/* Hostname */}
-        <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-5 transition-colors hover:border-zinc-700/40">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+        <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-3.5 transition-colors hover:border-zinc-700/40 sm:p-5">
+          <div className="mb-2 flex items-center justify-between sm:mb-3">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-600 sm:text-[11px]">
               Hostname
             </p>
             <Server className="h-3.5 w-3.5 text-zinc-700" />
           </div>
-          <p className="font-mono text-[18px] font-semibold tracking-tight text-zinc-100">
+          <p className="truncate font-mono text-[15px] font-semibold tracking-tight text-zinc-100 sm:text-[18px]">
             {metrics.hostname}
           </p>
         </div>
 
         {/* Kernel */}
-        <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-5 transition-colors hover:border-zinc-700/40">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+        <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-3.5 transition-colors hover:border-zinc-700/40 sm:p-5">
+          <div className="mb-2 flex items-center justify-between sm:mb-3">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-600 sm:text-[11px]">
               Kernel
             </p>
             <Cpu className="h-3.5 w-3.5 text-zinc-700" />
           </div>
-          <p className="font-mono text-[13px] font-semibold text-zinc-100 leading-snug">
+          <p className="truncate font-mono text-[12px] font-semibold text-zinc-100 leading-snug sm:text-[13px]">
             {metrics.os.kernel}
           </p>
-          <p className="mt-0.5 font-mono text-[11px] text-zinc-600">
+          <p className="mt-0.5 truncate font-mono text-[10px] text-zinc-600 sm:text-[11px]">
             {metrics.os.system} · {metrics.cpu.cores}c
           </p>
         </div>
 
         {/* Uptime */}
-        <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-5 transition-colors hover:border-zinc-700/40">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+        <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-3.5 transition-colors hover:border-zinc-700/40 sm:p-5">
+          <div className="mb-2 flex items-center justify-between sm:mb-3">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-600 sm:text-[11px]">
               Uptime
             </p>
             <Clock className="h-3.5 w-3.5 text-zinc-700" />
           </div>
-          <p className="font-mono text-[18px] font-semibold tracking-tight text-zinc-100">
+          <p className="font-mono text-[15px] font-semibold tracking-tight text-zinc-100 sm:text-[18px]">
             {metrics.uptime}
           </p>
         </div>
 
         {/* Temperature or load */}
-        <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-5 transition-colors hover:border-zinc-700/40">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-600">
-              {metrics.temperature.available ? "Temperature" : "Load Avg"}
+        <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-3.5 transition-colors hover:border-zinc-700/40 sm:p-5">
+          <div className="mb-2 flex items-center justify-between sm:mb-3">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-600 sm:text-[11px]">
+              {metrics.temperature.available ? "Temp" : "Load Avg"}
             </p>
             <Thermometer className="h-3.5 w-3.5 text-zinc-700" />
           </div>
           {metrics.temperature.available && metrics.temperature.value != null ? (
             <>
-              <p className="font-mono text-[18px] font-semibold tracking-tight text-zinc-100">
+              <p className="font-mono text-[15px] font-semibold tracking-tight text-zinc-100 sm:text-[18px]">
                 {metrics.temperature.value}°C
               </p>
-              <p className="mt-0.5 font-mono text-[11px] text-zinc-600">
-                peak sensor reading
+              <p className="mt-0.5 font-mono text-[10px] text-zinc-600 sm:text-[11px]">
+                peak sensor
               </p>
             </>
           ) : (
             <>
-              <p className="font-mono text-[18px] font-semibold tracking-tight text-zinc-100">
+              <p className="font-mono text-[15px] font-semibold tracking-tight text-zinc-100 sm:text-[18px]">
                 {metrics.cpu.loadAvg1m.toFixed(2)}
               </p>
-              <p className="mt-0.5 font-mono text-[11px] text-zinc-600">
-                {metrics.cpu.loadAvg5m.toFixed(2)} · {metrics.cpu.loadAvg15m.toFixed(2)} avg
+              <p className="mt-0.5 font-mono text-[10px] text-zinc-600 sm:text-[11px]">
+                {metrics.cpu.loadAvg5m.toFixed(2)} · {metrics.cpu.loadAvg15m.toFixed(2)}
               </p>
             </>
           )}
