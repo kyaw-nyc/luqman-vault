@@ -21,25 +21,34 @@ export default async function AnalyticsPage() {
     getStats(),
   ]);
 
+  const folders = Array.isArray(analytics.folders) ? analytics.folders : [];
+  const largestFiles = Array.isArray(analytics.largestFiles) ? analytics.largestFiles : [];
+  const typeBreakdown = Array.isArray(analytics.typeBreakdown) ? analytics.typeBreakdown : [];
+  const totalFiles = Number(analytics.totalFiles) || 0;
+  const totalFolders = Number(analytics.totalFolders) || 0;
+  const totalSizeBytes = Number(analytics.totalSizeBytes) || 0;
+  const diskTotalBytes = Number(analytics.diskTotalBytes) || 0;
+  const diskFreeBytes = Number(analytics.diskFreeBytes) || 0;
+
   const summaryCards = [
     {
       label: "Total Files",
-      value: analytics.totalFiles.toLocaleString(),
+      value: totalFiles.toLocaleString(),
       icon: Files,
     },
     {
       label: "Total Folders",
-      value: analytics.totalFolders.toLocaleString(),
+      value: totalFolders.toLocaleString(),
       icon: FolderOpen,
     },
     {
       label: "Storage Used",
-      value: formatBytes(analytics.totalSizeBytes),
+      value: formatBytes(totalSizeBytes),
       icon: Database,
     },
     {
       label: "Disk Free",
-      value: formatBytes(analytics.diskFreeBytes),
+      value: formatBytes(diskFreeBytes),
       icon: HardDrive,
     },
   ];
@@ -75,21 +84,21 @@ export default async function AnalyticsPage() {
       {/* Storage map */}
       <div className="mt-4 sm:mt-6">
         <StorageMap
-          folders={analytics.folders}
-          totalSizeBytes={analytics.totalSizeBytes}
-          diskTotalBytes={analytics.diskTotalBytes}
+          folders={folders}
+          totalSizeBytes={totalSizeBytes}
+          diskTotalBytes={diskTotalBytes}
         />
       </div>
 
       {/* Folder explorer + Largest files */}
       <div className="mt-4 grid gap-4 sm:mt-6 lg:grid-cols-2">
-        <FolderExplorer folders={analytics.folders} />
-        <LargestFiles files={analytics.largestFiles} />
+        <FolderExplorer folders={folders} />
+        <LargestFiles files={largestFiles} />
       </div>
 
       {/* Type breakdown */}
       <div className="mt-4 sm:mt-6">
-        <TypeBreakdown types={analytics.typeBreakdown} />
+        <TypeBreakdown types={typeBreakdown} />
       </div>
     </>
   );

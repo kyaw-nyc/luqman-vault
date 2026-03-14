@@ -36,7 +36,11 @@ export function VersionDrawer({ filePath, fileName, open, onClose }: Props) {
     setError(null);
     try {
       const v = await getFileVersions(filePath);
-      setVersions(v.reverse());
+      const valid = (Array.isArray(v) ? v : []).filter(
+        (x): x is FileVersion =>
+          x && typeof x.id === "string" && typeof x.createdAt === "string",
+      );
+      setVersions(valid.reverse());
     } catch {
       setError("Failed to load version history");
     } finally {
@@ -149,11 +153,11 @@ export function VersionDrawer({ filePath, fileName, open, onClose }: Props) {
                           v{versions.length - i}
                         </span>
                         <span className="font-mono text-[12px] text-zinc-400">
-                          {formatBytes(v.size)}
+                          {formatBytes(Number(v.size) || 0)}
                         </span>
                       </div>
                       <p className="mt-1.5 font-mono text-[11px] text-zinc-600">
-                        {formatDate(v.createdAt)}
+                        {formatDate(v.createdAt ?? "")}
                       </p>
                     </div>
                     <div className="flex shrink-0 gap-1.5">

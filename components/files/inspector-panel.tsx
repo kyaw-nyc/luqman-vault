@@ -94,7 +94,9 @@ export function InspectorPanel({
     setImageDims(null);
 
     if (!file.isDirectory) {
-      getFileVersions(file.path).then((v) => setVersionCount(v.length));
+      getFileVersions(file.path)
+        .then((v) => setVersionCount(Array.isArray(v) ? v.length : 0))
+        .catch(() => setVersionCount(0));
 
       if (file.extension && IMAGE_EXTS.has(file.extension.toLowerCase())) {
         const img = new window.Image();

@@ -10,9 +10,18 @@ interface Props {
   files: AnalyticsFile[];
 }
 
+function isValidFile(f: unknown): f is AnalyticsFile {
+  return (
+    f != null &&
+    typeof (f as AnalyticsFile).name === "string" &&
+    typeof (f as AnalyticsFile).path === "string"
+  );
+}
+
 export function LargestFiles({ files }: Props) {
   const [showCount, setShowCount] = useState(15);
-  const visible = files.slice(0, showCount);
+  const safe = Array.isArray(files) ? files.filter(isValidFile) : [];
+  const visible = safe.slice(0, showCount);
 
   return (
     <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-4 sm:p-6">
@@ -25,10 +34,11 @@ export function LargestFiles({ files }: Props) {
       ) : (
         <div className="space-y-0.5">
           {visible.map((file, i) => {
-            const parentPath = file.path.substring(
-              0,
-              file.path.lastIndexOf("/"),
-            ) || "/";
+            const path = file.path || "/";
+            const parentPath =
+              path.substring(0, path.lastIndexOf("/")) || "/";
+            const size = Number(file.size) || 0;
+            const modifiedAt = file.modifiedAt ?? "";
             return (
               <div
                 key={file.path}
@@ -47,7 +57,7 @@ export function LargestFiles({ files }: Props) {
                   </Link>
                   {/* Mobile: size + time inline */}
                   <span className="mt-0.5 block truncate font-mono text-[10px] text-zinc-600 sm:hidden">
-                    {formatBytes(file.size)} · {formatRelativeTime(file.modifiedAt)}
+                    {formatBytes(size)} · {formatRelativeTime(modifiedAt)}
                   </span>
                   {/* Desktop: full path */}
                   <span className="hidden truncate font-mono text-[10px] text-zinc-700 sm:block">
@@ -57,10 +67,10 @@ export function LargestFiles({ files }: Props) {
                 {/* Desktop: size + time stacked right */}
                 <div className="hidden shrink-0 flex-col items-end gap-0.5 sm:flex">
                   <span className="font-mono text-[12px] text-zinc-400">
-                    {formatBytes(file.size)}
+                    {formatBytes(size)}
                   </span>
                   <span className="font-mono text-[10px] text-zinc-700">
-                    {formatRelativeTime(file.modifiedAt)}
+                    {formatRelativeTime(modifiedAt)}
                   </span>
                 </div>
               </div>
@@ -69,12 +79,12 @@ export function LargestFiles({ files }: Props) {
         </div>
       )}
 
-      {files.length > showCount && (
+      {safe.length > showCount && (
         <button
           onClick={() => setShowCount((c) => c + 15)}
           className="mt-3 w-full rounded-lg py-2 text-center font-mono text-[11px] text-zinc-500 transition-colors hover:bg-zinc-800/30 hover:text-zinc-300"
         >
-          Show more ({files.length - showCount} remaining)
+          Show more ({safe.length - showCount} remaining)
         </button>
       )}
     </div>

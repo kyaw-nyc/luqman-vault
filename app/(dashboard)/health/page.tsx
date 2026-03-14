@@ -48,12 +48,20 @@ function ProcessTable({
   title: string;
   processes: ProcessInfo[];
 }) {
+  const safe = Array.isArray(processes)
+    ? processes.filter(
+        (p) =>
+          p != null &&
+          typeof p.pid === "number" &&
+          typeof p.name === "string",
+      )
+    : [];
   return (
     <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-4 sm:p-6">
       <p className="mb-3 text-[10px] font-medium uppercase tracking-widest text-zinc-600 sm:mb-4 sm:text-[11px]">
         {title}
       </p>
-      {processes.length === 0 ? (
+      {safe.length === 0 ? (
         <p className="text-[13px] text-zinc-700">No data available</p>
       ) : (
         <div className="overflow-x-auto">
@@ -75,7 +83,10 @@ function ProcessTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/20">
-              {processes.map((p) => (
+              {safe.map((p) => {
+                const cpu = Number(p.cpuPercent);
+                const mem = Number(p.memoryPercent);
+                return (
                 <tr key={p.pid} className="group">
                   <td className="py-2 font-mono text-[11px] text-zinc-700 max-sm:hidden sm:py-2.5">
                     {p.pid}
@@ -84,13 +95,14 @@ function ProcessTable({
                     {p.name}
                   </td>
                   <td className="py-2 text-right font-mono text-[11px] text-zinc-400 sm:py-2.5 sm:text-[12px]">
-                    {p.cpuPercent.toFixed(1)}%
+                    {Number.isFinite(cpu) ? `${cpu.toFixed(1)}%` : "—"}
                   </td>
                   <td className="py-2 text-right font-mono text-[11px] text-zinc-400 sm:py-2.5 sm:text-[12px]">
-                    {p.memoryPercent.toFixed(1)}%
+                    {Number.isFinite(mem) ? `${mem.toFixed(1)}%` : "—"}
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
@@ -193,7 +205,7 @@ export default async function HealthPage() {
             </p>
             <Thermometer className="h-3.5 w-3.5 text-zinc-700" />
           </div>
-          {metrics.temperature.available && metrics.temperature.value != null ? (
+          {metrics.temperature?.available && metrics.temperature?.value != null ? (
             <>
               <p className="font-mono text-[15px] font-semibold tracking-tight text-zinc-100 sm:text-[18px]">
                 {metrics.temperature.value}°C
@@ -205,10 +217,10 @@ export default async function HealthPage() {
           ) : (
             <>
               <p className="font-mono text-[15px] font-semibold tracking-tight text-zinc-100 sm:text-[18px]">
-                {metrics.cpu.loadAvg1m.toFixed(2)}
+                {Number.isFinite(metrics.cpu?.loadAvg1m) ? metrics.cpu.loadAvg1m.toFixed(2) : "—"}
               </p>
               <p className="mt-0.5 font-mono text-[10px] text-zinc-600 sm:text-[11px]">
-                {metrics.cpu.loadAvg5m.toFixed(2)} · {metrics.cpu.loadAvg15m.toFixed(2)}
+                {Number.isFinite(metrics.cpu?.loadAvg5m) ? metrics.cpu.loadAvg5m.toFixed(2) : "—"} · {Number.isFinite(metrics.cpu?.loadAvg15m) ? metrics.cpu.loadAvg15m.toFixed(2) : "—"}
               </p>
             </>
           )}
@@ -231,8 +243,8 @@ export default async function HealthPage() {
       {/* ── Top Processes ────────────────────────────────────────────────── */}
       <SectionLabel>Top Processes</SectionLabel>
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <ProcessTable title="By CPU" processes={metrics.topByCpu} />
-        <ProcessTable title="By Memory" processes={metrics.topByMemory} />
+        <ProcessTable title="By CPU" processes={Array.isArray(metrics.topByCpu) ? metrics.topByCpu : []} />
+        <ProcessTable title="By Memory" processes={Array.isArray(metrics.topByMemory) ? metrics.topByMemory : []} />
       </div>
 
       {/* ── Network & Runtime ────────────────────────────────────────────── */}

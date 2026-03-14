@@ -70,15 +70,12 @@ export async function searchFiles(
   query: string,
   basePath: string = "/",
 ): Promise<SearchResult[]> {
-  try {
-    const res = await fetch(
-      `/api/search?query=${encodeURIComponent(query)}&basePath=${encodeURIComponent(basePath)}`,
-    );
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
-    return [];
-  }
+  const res = await fetch(
+    `/api/search?query=${encodeURIComponent(query)}&basePath=${encodeURIComponent(basePath)}`,
+  );
+  if (!res.ok) throw new Error("Search failed");
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
 }
 
 export async function getFolderSize(path: string): Promise<number> {
@@ -127,9 +124,20 @@ export async function moveItem(fromPath: string, toPath: string): Promise<void> 
 // ── Trash ─────────────────────────────────────────────────────────────────────
 // Server-side version (uses BACKEND_URL directly, called from page.tsx)
 export async function getTrash(): Promise<TrashItem[]> {
-  return fetchApi("/api/trash", { items: [] }, NO_STORE).then(
-    (d) => (d as { items: TrashItem[] }).items,
-  );
+  return fetchApi("/api/trash", { items: [] }, NO_STORE).then((d) => {
+    const items = (d as { items?: unknown }).items;
+    if (!Array.isArray(items)) return [];
+    return items.filter(
+      (i): i is TrashItem =>
+        i &&
+        typeof i.id === "string" &&
+        typeof i.name === "string" &&
+        typeof i.originalPath === "string" &&
+        typeof (i as TrashItem).trashedAt === "string" &&
+        typeof (i as TrashItem).isDirectory === "boolean" &&
+        typeof (i as TrashItem).size === "number",
+    );
+  });
 }
 
 // Client-side mutations (same-origin proxy)
@@ -162,6 +170,21 @@ export async function bulkDelete(paths: string[]): Promise<void> {
 
 export async function bulkMove(paths: string[], destination: string): Promise<void> {
   return mutate("/api/bulk-move", { paths, destination });
+}
+
+// ── ZIP download ─────────────────────────────────────────────────────────────
+
+export async function downloadAsZip(paths: string[]): Promise<Blob> {
+  const res = await fetch("/api/zip", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ paths }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { detail?: string }).detail ?? "ZIP creation failed");
+  }
+  return res.blob();
 }
 
 // ── Service logs & restart (client-callable, same-origin proxy) ──────────────
@@ -204,16 +227,16 @@ export async function getStorageAnalytics(): Promise<StorageAnalytics> {
 export async function getFileVersions(
   path: string,
 ): Promise<FileVersion[]> {
-  try {
-    const res = await fetch(
-      `/api/versions?path=${encodeURIComponent(path)}`,
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.versions ?? [];
-  } catch {
-    return [];
+  const res = await fetch(
+    `/api/versions?path=${encodeURIComponent(path)}`,
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? "Failed to load versions");
   }
+  const data = await res.json();
+  const versions = data?.versions;
+  return Array.isArray(versions) ? versions : [];
 }
 
 export async function restoreVersion(id: string): Promise<void> {

@@ -15,8 +15,17 @@ export function usePins() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(KEY);
-      if (saved) setPins(JSON.parse(saved));
-    } catch {}
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return;
+      const valid = parsed.filter(
+        (p): p is Pin =>
+          p && typeof p.path === "string" && typeof p.label === "string",
+      );
+      if (valid.length > 0) setPins(valid);
+    } catch {
+      // Corrupted or invalid data — leave pins empty
+    }
   }, []);
 
   const save = (next: Pin[]) => {

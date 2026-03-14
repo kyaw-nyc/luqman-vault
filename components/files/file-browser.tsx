@@ -31,6 +31,7 @@ import {
   Clock,
   GalleryHorizontalEnd,
   Info,
+  FileArchive,
 } from "lucide-react";
 import type { FileItem, SearchResult } from "@/types/files";
 import { FileIcon } from "./file-icon";
@@ -50,6 +51,7 @@ import {
   uploadFile,
   bulkDelete,
   bulkMove,
+  downloadAsZip,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
@@ -198,6 +200,7 @@ export function FileBrowser({
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // Lazy folder sizes (null = loading, -1 = error, ≥0 = bytes)
   const [folderSizes, setFolderSizes] = useState<Record<string, number | null>>({});
@@ -222,6 +225,8 @@ export function FileBrowser({
 
   // Multi-select
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+  const [zipPreparing, setZipPreparing] = useState(false);
+  const [uploadDetailsExpanded, setUploadDetailsExpanded] = useState(false);
   // Explicit select mode so mobile "Select" button works without pre-selecting
   const [selectMode, setSelectMode] = useState(false);
   const isSelecting = selectMode || selectedPaths.size > 0;
@@ -281,15 +286,18 @@ export function FileBrowser({
     const q = query.trim();
     if (!q) {
       setSearchResults(null);
+      setSearchError(null);
       setSearchLoading(false);
       return;
     }
     setSearchLoading(true);
+    setSearchError(null);
     const t = setTimeout(async () => {
       try {
         const results = await searchFiles(q, currentPath);
         setSearchResults(results);
-      } catch {
+      } catch (e) {
+        setSearchError(e instanceof Error ? e.message : "Search failed");
         setSearchResults([]);
       } finally {
         setSearchLoading(false);
@@ -678,6 +686,25 @@ export function FileBrowser({
     }
   }
 
+  async function handleDownloadZip(paths?: string[]) {
+    const toZip = paths ?? Array.from(selectedPaths);
+    if (toZip.length === 0) return;
+    setZipPreparing(true);
+    try {
+      const blob = await downloadAsZip(toZip);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = toZip.length === 1 ? `${toZip[0].split("/").filter(Boolean).pop() ?? "download"}.zip` : "download.zip";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "ZIP download failed");
+    } finally {
+      setZipPreparing(false);
+    }
+  }
+
   // ── Shared row actions renderer ────────────────────────────────────────────
 
   function RowActions({ file }: { file: FileItem }) {
@@ -728,6 +755,19 @@ export function FileBrowser({
                 <FolderInput className="h-3.5 w-3.5" />
                 Move to
               </button>
+              {file.isDirectory && (
+                <button
+                  onClick={() => {
+                    handleDownloadZip([file.path]);
+                    setOpenMenu(null);
+                  }}
+                  disabled={zipPreparing}
+                  className="flex w-full items-center gap-2.5 px-3 py-3 text-[13px] text-zinc-400 transition-colors hover:bg-zinc-800/40 hover:text-zinc-200 disabled:opacity-50"
+                >
+                  <FileArchive className="h-3.5 w-3.5" />
+                  Download ZIP
+                </button>
+              )}
               {!file.isDirectory && (
                 <button
                   onClick={() => {
@@ -1017,6 +1057,8 @@ export function FileBrowser({
           total={displayed.length}
           onDelete={() => openDialog({ type: "bulk-delete" })}
           onMove={() => openDialog({ type: "bulk-move" })}
+          onDownloadZip={handleDownloadZip}
+          zipPreparing={zipPreparing}
           onSelectAll={selectAll}
           onClear={clearSelection}
         />
@@ -1059,55 +1101,147 @@ export function FileBrowser({
         </div>
       )}
 
-      {/* ── Upload queue ──────────────────────────────────────────────────── */}
-      {uploadQueue.length > 0 && (
-        <div className="mb-3 overflow-hidden rounded-lg border border-zinc-800/40 bg-zinc-900/40">
-          <div className="flex items-center justify-between border-b border-zinc-800/30 px-4 py-2">
-            <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-600">
-              Uploading to {currentPath}
-            </p>
-            {allDone && (
-              <button
-                onClick={() => setUploadQueue([])}
-                className="text-[11px] text-zinc-600 transition-colors hover:text-zinc-400"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          {uploadQueue.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-3 border-b border-zinc-800/20 px-4 py-2.5 last:border-0"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="truncate text-[12px] text-zinc-400">
-                  {item.relativePath ?? item.file.name}
-                </p>
-                {item.status === "uploading" && (
-                  <div className="mt-1 h-0.5 w-full overflow-hidden rounded-full bg-zinc-800">
-                    <div
-                      className="h-full rounded-full bg-emerald-500 transition-all duration-150"
-                      style={{ width: `${item.progress}%` }}
-                    />
+      {/* ── Upload queue (aggregated for large batches) ───────────────────── */}
+      {uploadQueue.length > 0 && (() => {
+        const total = uploadQueue.length;
+        const done = uploadQueue.filter((u) => u.status === "complete" || u.status === "error");
+        const uploadedCount = done.length;
+        const successCount = uploadQueue.filter((u) => u.status === "complete").length;
+        const errorCount = uploadQueue.filter((u) => u.status === "error").length;
+        const uploading = uploadQueue.find((u) => u.status === "uploading");
+        const currentName = uploading?.relativePath ?? uploading?.file.name ?? "";
+        const currentProgress = uploading?.progress ?? 0;
+        const folderPaths = new Set<string>();
+        for (const item of uploadQueue) {
+          if (item.relativePath) {
+            const parts = item.relativePath.split("/").filter(Boolean);
+            for (let i = 0; i < parts.length - 1; i++) {
+              folderPaths.add(parts.slice(0, i + 1).join("/"));
+            }
+          }
+        }
+        const folderCount = folderPaths.size;
+        const showCompact = total > 10;
+        const detailLimit = 50;
+
+        return (
+          <div className="mb-3 overflow-hidden rounded-lg border border-zinc-800/40 bg-zinc-900/40">
+            <div className="flex items-center justify-between border-b border-zinc-800/30 px-4 py-2.5">
+              <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+                Uploading to {currentPath}
+              </p>
+              {allDone && (
+                <button
+                  onClick={() => setUploadQueue([])}
+                  className="text-[11px] text-zinc-600 transition-colors hover:text-zinc-400"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Compact aggregated panel */}
+            <div className="px-4 py-3">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[12px] text-zinc-400">
+                <span>
+                  <span className="font-semibold text-zinc-200">{uploadedCount}</span>
+                  {" / "}
+                  <span className="text-zinc-500">{total}</span>
+                  {" files"}
+                </span>
+                {folderCount > 0 && (
+                  <span className="text-zinc-600">{folderCount} folders</span>
+                )}
+                {successCount > 0 && (
+                  <span className="text-emerald-500/80">{successCount} done</span>
+                )}
+                {errorCount > 0 && (
+                  <span className="text-red-400/80">{errorCount} failed</span>
+                )}
+              </div>
+
+              {/* Overall progress bar */}
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800/60">
+                <div
+                  className="h-full rounded-full bg-emerald-500/80 transition-all duration-200"
+                  style={{ width: `${total > 0 ? (uploadedCount / total) * 100 : 0}%` }}
+                />
+              </div>
+
+              {/* Current file (when uploading) */}
+              {uploading && (
+                <div className="mt-2 flex items-center gap-2">
+                  <Loader2 className="h-3 w-3 shrink-0 animate-spin text-zinc-500" />
+                  <p className="min-w-0 truncate font-mono text-[11px] text-zinc-500">
+                    {currentName}
+                  </p>
+                  <span className="shrink-0 font-mono text-[10px] text-zinc-600">
+                    {currentProgress}%
+                  </span>
+                </div>
+              )}
+
+              {/* Completion state */}
+              {allDone && (
+                <div className="mt-2 flex items-center gap-2">
+                  {errorCount > 0 ? (
+                    <AlertCircle className="h-3.5 w-3.5 text-amber-500/70" />
+                  ) : (
+                    <CheckCircle className="h-3.5 w-3.5 text-emerald-500/70" />
+                  )}
+                  <span className="font-mono text-[11px] text-zinc-500">
+                    {errorCount > 0
+                      ? `Complete · ${successCount} uploaded, ${errorCount} failed`
+                      : `All ${total} file${total !== 1 ? "s" : ""} uploaded`}
+                  </span>
+                </div>
+              )}
+
+              {/* Optional details (collapsible, limited) */}
+              {total > 5 && (
+                <button
+                  onClick={() => setUploadDetailsExpanded((e) => !e)}
+                  className="mt-2 text-[11px] text-zinc-600 transition-colors hover:text-zinc-400"
+                >
+                  {uploadDetailsExpanded ? "Hide details" : `Show details (${Math.min(total, detailLimit)}${total > detailLimit ? "+" : ""})`}
+                </button>
+              )}
+            </div>
+
+            {/* Expandable file list (max 50 rows) */}
+            {uploadDetailsExpanded && uploadQueue.length > 0 && (
+              <div className="max-h-48 overflow-y-auto border-t border-zinc-800/30">
+                {uploadQueue.slice(0, detailLimit).map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 border-b border-zinc-800/20 px-4 py-2 last:border-0"
+                  >
+                    <div className="min-w-0 flex-1 truncate font-mono text-[11px] text-zinc-500">
+                      {item.relativePath ?? item.file.name}
+                    </div>
+                    <div className="shrink-0">
+                      {item.status === "complete" ? (
+                        <CheckCircle className="h-3 w-3 text-emerald-500/70" />
+                      ) : item.status === "error" ? (
+                        <AlertCircle className="h-3 w-3 text-red-400/70" />
+                      ) : item.status === "uploading" ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-zinc-500" />
+                      ) : (
+                        <span className="text-[9px] text-zinc-700">queued</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {uploadQueue.length > detailLimit && (
+                  <div className="px-4 py-2 font-mono text-[10px] text-zinc-600">
+                    +{uploadQueue.length - detailLimit} more
                   </div>
                 )}
               </div>
-              <div className="shrink-0">
-                {item.status === "complete" ? (
-                  <CheckCircle className="h-3.5 w-3.5 text-emerald-500/70" />
-                ) : item.status === "error" ? (
-                  <AlertCircle className="h-3.5 w-3.5 text-red-400/70" />
-                ) : item.status === "uploading" ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500" />
-                ) : (
-                  <span className="font-mono text-[10px] text-zinc-700">queued</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Content (with drag-to-upload) ─────────────────────────────────── */}
       <div
@@ -1150,6 +1284,20 @@ export function FileBrowser({
           searchLoading || searchResults === null ? (
             <div className="flex items-center justify-center py-24">
               <Loader2 className="h-5 w-5 animate-spin text-zinc-700" />
+            </div>
+          ) : searchError ? (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-red-500/20 py-24">
+              <AlertCircle className="mb-4 h-10 w-10 text-red-400/60" />
+              <p className="text-[13px] text-red-400/80">{searchError}</p>
+              <button
+                onClick={() => {
+                  setSearchError(null);
+                  setQuery("");
+                }}
+                className="mt-3 text-[13px] text-emerald-500/70 transition-colors hover:text-emerald-400"
+              >
+                Clear and try again
+              </button>
             </div>
           ) : searchResults.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800/50 py-24">
@@ -1364,6 +1512,19 @@ export function FileBrowser({
                           <FolderInput className="h-3.5 w-3.5" />
                           Move to
                         </button>
+                        {file.isDirectory && (
+                          <button
+                            onClick={() => {
+                              handleDownloadZip([file.path]);
+                              setOpenMenu(null);
+                            }}
+                            disabled={zipPreparing}
+                            className="flex w-full items-center gap-2.5 px-3 py-3 text-[13px] text-zinc-400 transition-colors hover:bg-zinc-800/40 hover:text-zinc-200 disabled:opacity-50"
+                          >
+                            <FileArchive className="h-3.5 w-3.5" />
+                            Download ZIP
+                          </button>
+                        )}
                         {!file.isDirectory && (
                           <button
                             onClick={() => {
@@ -1373,7 +1534,7 @@ export function FileBrowser({
                             className="flex w-full items-center gap-2.5 px-3 py-3 text-[13px] text-zinc-400 transition-colors hover:bg-zinc-800/40 hover:text-zinc-200"
                           >
                             <Clock className="h-3.5 w-3.5" />
-                            Versions
+                            Version History
                           </button>
                         )}
                         <button
@@ -1392,7 +1553,7 @@ export function FileBrowser({
                           className="flex w-full items-center gap-2.5 px-3 py-3 text-[13px] text-red-400/80 transition-colors hover:bg-red-500/5 hover:text-red-400"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                          Delete
+                          Move to Trash
                         </button>
                       </div>
                     )}
@@ -1664,6 +1825,19 @@ export function FileBrowser({
                 <FolderInput className="h-5 w-5 text-zinc-500" />
                 Move to
               </button>
+              {mobileMenuFile.isDirectory && (
+                <button
+                  onClick={() => {
+                    handleDownloadZip([mobileMenuFile.path]);
+                    setMobileMenuFile(null);
+                  }}
+                  disabled={zipPreparing}
+                  className="flex w-full items-center gap-4 px-5 py-4 text-[15px] text-zinc-300 transition-colors active:bg-zinc-800/50 disabled:opacity-50"
+                >
+                  <FileArchive className="h-5 w-5 text-zinc-500" />
+                  Download ZIP
+                </button>
+              )}
               {!mobileMenuFile.isDirectory && (
                 <button
                   onClick={() => {

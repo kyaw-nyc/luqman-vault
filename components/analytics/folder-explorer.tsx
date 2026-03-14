@@ -20,18 +20,29 @@ export function FolderExplorer({ folders }: Props) {
   const [drill, setDrill] = useState<DrillState | null>(null);
   const [loading, setLoading] = useState(false);
   const [breadcrumb, setBreadcrumb] = useState<string[]>([]);
+  const [drillError, setDrillError] = useState<string | null>(null);
 
   const fetchChildren = useCallback(async (path: string) => {
     setLoading(true);
+    setDrillError(null);
     try {
       const res = await fetch(
         `/api/storage-tree?path=${encodeURIComponent(path)}`,
       );
       if (!res.ok) throw new Error("Failed");
       const data = await res.json();
-      setDrill({ path, children: data.children ?? [] });
+      const children = Array.isArray(data?.children)
+        ? data.children.filter(
+            (c: unknown) =>
+              c &&
+              typeof (c as { path?: unknown }).path === "string" &&
+              typeof (c as { name?: unknown }).name === "string",
+          )
+        : [];
+      setDrill({ path, children });
     } catch {
-      setDrill(null);
+      setDrill({ path, children: [] });
+      setDrillError("Failed to load folder contents");
     } finally {
       setLoading(false);
     }
@@ -55,10 +66,16 @@ export function FolderExplorer({ folders }: Props) {
     }
   };
 
-  const totalSize = folders.reduce((s, f) => s + f.sizeBytes, 0);
+  const totalSize = folders.reduce(
+    (s, f) => s + (Number(f.sizeBytes) || 0),
+    0,
+  );
 
   if (drill) {
-    const drillTotal = drill.children.reduce((s, c) => s + c.sizeBytes, 0);
+    const drillTotal = drill.children.reduce(
+      (s, c) => s + (Number((c as { sizeBytes?: unknown }).sizeBytes) || 0),
+      0,
+    );
     return (
       <div className="rounded-xl border border-zinc-800/40 bg-zinc-900/40 p-4 sm:p-6">
         <div className="mb-3 flex items-center gap-2 sm:mb-4">
@@ -77,14 +94,25 @@ export function FolderExplorer({ folders }: Props) {
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-zinc-600" />
           </div>
+        ) : drillError ? (
+          <div className="flex flex-col items-center gap-3 py-8">
+            <p className="text-sm text-red-400/80">{drillError}</p>
+            <button
+              onClick={() => fetchChildren(drill.path)}
+              className="rounded-lg px-3 py-1.5 text-[12px] text-zinc-400 transition-colors hover:bg-zinc-800/40 hover:text-zinc-200"
+            >
+              Retry
+            </button>
+          </div>
         ) : drill.children.length === 0 ? (
           <p className="py-4 text-center text-sm text-zinc-600">Empty directory</p>
         ) : (
           <div className="space-y-0.5">
             {drill.children.map((child) => {
+              const sizeBytes = Number((child as { sizeBytes?: unknown }).sizeBytes) || 0;
               const pct =
                 drillTotal > 0
-                  ? ((child.sizeBytes / drillTotal) * 100).toFixed(1)
+                  ? ((sizeBytes / drillTotal) * 100).toFixed(1)
                   : "0";
               return (
                 <div
@@ -113,13 +141,13 @@ export function FolderExplorer({ folders }: Props) {
                     )}
                     {/* Mobile: show size inline below name */}
                     <span className="mt-0.5 block font-mono text-[10px] text-zinc-600 sm:hidden">
-                      {formatBytes(child.sizeBytes)} · {pct}%
+                      {formatBytes(sizeBytes)} · {pct}%
                     </span>
                   </div>
                   {/* Desktop: size + pct + chevron */}
                   <div className="hidden shrink-0 items-baseline gap-2 sm:flex">
                     <span className="font-mono text-[12px] text-zinc-400">
-                      {formatBytes(child.sizeBytes)}
+                      {formatBytes(sizeBytes)}
                     </span>
                     <span className="font-mono text-[10px] text-zinc-700">
                       {pct}%
@@ -152,10 +180,13 @@ export function FolderExplorer({ folders }: Props) {
       ) : (
         <div className="space-y-0.5">
           {folders.map((folder) => {
+            const sizeBytes = Number(folder.sizeBytes) || 0;
             const pct =
               totalSize > 0
-                ? ((folder.sizeBytes / totalSize) * 100).toFixed(1)
+                ? ((sizeBytes / totalSize) * 100).toFixed(1)
                 : "0";
+            const fileCount = Number(folder.fileCount) || 0;
+            const folderCount = Number(folder.folderCount) || 0;
             return (
               <div
                 key={folder.path}
@@ -173,20 +204,20 @@ export function FolderExplorer({ folders }: Props) {
                   </button>
                   {/* Mobile: size + counts inline */}
                   <span className="mt-0.5 block font-mono text-[10px] text-zinc-600 sm:hidden">
-                    {formatBytes(folder.sizeBytes)} · {pct}% · {folder.fileCount.toLocaleString()} files
+                    {formatBytes(sizeBytes)} · {pct}% · {fileCount.toLocaleString()} files
                   </span>
                   {/* Desktop: file/folder counts */}
                   <span className="hidden font-mono text-[10px] text-zinc-700 sm:block">
-                    {folder.fileCount.toLocaleString()} files
-                    {folder.folderCount > 0 &&
-                      ` · ${folder.folderCount.toLocaleString()} folders`}
+                    {fileCount.toLocaleString()} files
+                    {folderCount > 0 &&
+                      ` · ${folderCount.toLocaleString()} folders`}
                   </span>
                 </div>
                 {/* Desktop: size + bar + pct + chevron */}
                 <div className="hidden shrink-0 flex-col items-end gap-0.5 sm:flex">
                   <div className="flex items-baseline gap-2">
                     <span className="font-mono text-[12px] text-zinc-400">
-                      {formatBytes(folder.sizeBytes)}
+                      {formatBytes(sizeBytes)}
                     </span>
                     <span className="font-mono text-[10px] text-zinc-700">
                       {pct}%

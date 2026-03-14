@@ -9,9 +9,23 @@ import { formatBytes, formatDateCompact } from "@/lib/formatters";
 import { restoreTrashItem, permanentDeleteTrashItem, emptyTrash } from "@/lib/api";
 import { Dialog } from "@/components/ui/dialog";
 
+function isValidTrashItem(i: unknown): i is TrashItem {
+  return (
+    i != null &&
+    typeof (i as TrashItem).id === "string" &&
+    typeof (i as TrashItem).name === "string" &&
+    typeof (i as TrashItem).originalPath === "string" &&
+    typeof (i as TrashItem).trashedAt === "string" &&
+    typeof (i as TrashItem).isDirectory === "boolean" &&
+    typeof (i as TrashItem).size === "number"
+  );
+}
+
 export function TrashBrowser({ items: initial }: { items: TrashItem[] }) {
   const router = useRouter();
-  const [items, setItems] = useState<TrashItem[]>(initial);
+  const [items, setItems] = useState<TrashItem[]>(() =>
+    Array.isArray(initial) ? initial.filter(isValidTrashItem) : [],
+  );
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
