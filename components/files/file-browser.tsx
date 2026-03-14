@@ -7,6 +7,7 @@ import {
   Download,
   FolderOpen,
   FolderPlus,
+  FolderUp,
   MoreHorizontal,
   Pencil,
   FolderInput,
@@ -97,6 +98,7 @@ type ViewMode = "list" | "grid" | "gallery";
 interface UploadItem {
   id: string;
   file: File;
+  relativePath?: string; // set for folder uploads — path relative to upload root
   progress: number;
   status: "pending" | "uploading" | "complete" | "error";
 }
@@ -112,6 +114,64 @@ function FolderSizeCell({ sz }: { sz: number | null | undefined }) {
     return <span className="animate-pulse text-zinc-800">—</span>;
   if (sz < 0) return <>—</>;
   return <>{formatBytes(sz)}</>;
+}
+
+// ── Folder traversal (drag-and-drop) ──────────────────────────────────────────
+
+function getFileFromEntry(entry: FileSystemFileEntry): Promise<File> {
+  return new Promise((resolve, reject) => entry.file(resolve, reject));
+}
+
+async function readAllEntries(reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> {
+  const all: FileSystemEntry[] = [];
+  let batch: FileSystemEntry[];
+  do {
+    batch = await new Promise<FileSystemEntry[]>((resolve, reject) =>
+      reader.readEntries(resolve, reject),
+    );
+    all.push(...batch);
+  } while (batch.length > 0);
+  return all;
+}
+
+async function traverseEntry(
+  entry: FileSystemEntry,
+  prefix: string,
+): Promise<{ file: File; relativePath: string }[]> {
+  if (entry.isFile) {
+    const file = await getFileFromEntry(entry as FileSystemFileEntry);
+    return [{ file, relativePath: prefix + entry.name }];
+  }
+  if (entry.isDirectory) {
+    const reader = (entry as FileSystemDirectoryEntry).createReader();
+    const entries = await readAllEntries(reader);
+    const nested = await Promise.all(
+      entries.map((e) => traverseEntry(e, prefix + entry.name + "/")),
+    );
+    return nested.flat();
+  }
+  return [];
+}
+
+async function collectFromDataTransferItems(
+  items: DataTransferItem[],
+): Promise<{ file: File; relativePath?: string }[]> {
+  const entries = items
+    .filter((i) => i.kind === "file")
+    .map((i) => i.webkitGetAsEntry())
+    .filter((e): e is FileSystemEntry => e !== null);
+
+  const hasDirectory = entries.some((e) => e.isDirectory);
+
+  if (hasDirectory) {
+    // Full folder traversal — give every item a relative path.
+    const results = await Promise.all(entries.map((e) => traverseEntry(e, "")));
+    return results.flat();
+  }
+
+  // All flat files — return without relative paths so they upload normally.
+  const files = items.map((i) => i.getAsFile()).filter((f): f is File => f !== null);
+  return files.map((f) => ({ file: f }));
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -158,6 +218,7 @@ export function FileBrowser({
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  const folderUploadInputRef = useRef<HTMLInputElement>(null);
 
   // Multi-select
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
@@ -269,11 +330,13 @@ export function FileBrowser({
 
   // ── Inline upload ─────────────────────────────────────────────────────────
 
-  const enqueueFiles = useCallback(
-    async (fileList: FileList) => {
-      const newItems: UploadItem[] = Array.from(fileList).map((f) => ({
-        id: `${f.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        file: f,
+  // Shared upload runner — accepts items with optional relativePath for folder uploads.
+  const enqueueItems = useCallback(
+    async (items: { file: File; relativePath?: string }[]) => {
+      const newItems: UploadItem[] = items.map(({ file, relativePath }) => ({
+        id: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        file,
+        relativePath,
         progress: 0,
         status: "pending" as const,
       }));
@@ -288,7 +351,7 @@ export function FileBrowser({
             setUploadQueue((prev) =>
               prev.map((u) => (u.id === item.id ? { ...u, progress: pct } : u)),
             );
-          });
+          }, item.relativePath);
           setUploadQueue((prev) =>
             prev.map((u) =>
               u.id === item.id ? { ...u, status: "complete", progress: 100 } : u,
@@ -303,6 +366,27 @@ export function FileBrowser({
       router.refresh();
     },
     [currentPath, router],
+  );
+
+  // Flat file upload (existing behaviour — no relative path).
+  const enqueueFiles = useCallback(
+    (fileList: FileList) => {
+      const items = Array.from(fileList).map((f) => ({ file: f }));
+      return enqueueItems(items);
+    },
+    [enqueueItems],
+  );
+
+  // Folder upload via webkitdirectory input — preserves webkitRelativePath.
+  const enqueueFolderInput = useCallback(
+    (fileList: FileList) => {
+      const items = Array.from(fileList).map((f) => ({
+        file: f,
+        relativePath: f.webkitRelativePath || f.name,
+      }));
+      return enqueueItems(items);
+    },
+    [enqueueItems],
   );
 
   // ── Derived data (normal mode) ────────────────────────────────────────────
@@ -787,13 +871,22 @@ export function FileBrowser({
                   )}
                 </div>
 
-                {/* Upload */}
+                {/* Upload files */}
                 <button
                   onClick={() => uploadInputRef.current?.click()}
                   className="rounded-md border border-zinc-800/50 bg-zinc-900/40 p-2 text-zinc-500 transition-all hover:border-zinc-700/60 hover:text-zinc-300 sm:px-3"
-                  title="Upload"
+                  title="Upload files (U)"
                 >
                   <Upload className="h-4 w-4" />
+                </button>
+
+                {/* Upload folder */}
+                <button
+                  onClick={() => folderUploadInputRef.current?.click()}
+                  className="rounded-md border border-zinc-800/50 bg-zinc-900/40 p-2 text-zinc-500 transition-all hover:border-zinc-700/60 hover:text-zinc-300 sm:px-3"
+                  title="Upload folder"
+                >
+                  <FolderUp className="h-4 w-4" />
                 </button>
 
                 {/* New folder */}
@@ -988,7 +1081,9 @@ export function FileBrowser({
               className="flex items-center gap-3 border-b border-zinc-800/20 px-4 py-2.5 last:border-0"
             >
               <div className="flex-1 min-w-0">
-                <p className="truncate text-[12px] text-zinc-400">{item.file.name}</p>
+                <p className="truncate text-[12px] text-zinc-400">
+                  {item.relativePath ?? item.file.name}
+                </p>
                 {item.status === "uploading" && (
                   <div className="mt-1 h-0.5 w-full overflow-hidden rounded-full bg-zinc-800">
                     <div
@@ -1028,10 +1123,14 @@ export function FileBrowser({
             setIsDragOver(false);
           }
         }}
-        onDrop={(e) => {
+        onDrop={async (e) => {
           e.preventDefault();
           setIsDragOver(false);
-          if (e.dataTransfer.files.length > 0) {
+          const dtItems = Array.from(e.dataTransfer.items);
+          if (dtItems.length > 0) {
+            const items = await collectFromDataTransferItems(dtItems);
+            if (items.length > 0) enqueueItems(items);
+          } else if (e.dataTransfer.files.length > 0) {
             enqueueFiles(e.dataTransfer.files);
           }
         }}
@@ -1623,6 +1722,22 @@ export function FileBrowser({
         onChange={(e) => {
           if (e.target.files?.length) {
             enqueueFiles(e.target.files);
+            e.target.value = "";
+          }
+        }}
+      />
+
+      {/* ── Hidden folder input for folder upload ─────────────────────────── */}
+      <input
+        ref={folderUploadInputRef}
+        type="file"
+        // @ts-expect-error — webkitdirectory is not in React's type defs
+        webkitdirectory=""
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.length) {
+            enqueueFolderInput(e.target.files);
             e.target.value = "";
           }
         }}

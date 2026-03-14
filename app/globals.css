@@ -53,6 +53,25 @@ body {
   display: none;
 }
 
+/* ── xterm rendering fidelity fixes ────────────────────────────────────────
+   xterm uses a hidden measure element to calculate cell dimensions. Tailwind's
+   preflight resets box-sizing and margins globally, which can corrupt those
+   measurements. These rules restore the values xterm expects. */
+
+/* Ensure the char measure element is never affected by global resets */
+.xterm-char-measure-element {
+  padding: 0 !important;
+  margin: 0 !important;
+  /* line-height: normal is already set by xterm.css — this is defensive */
+  line-height: normal !important;
+  box-sizing: content-box !important;
+}
+
+/* xterm canvas should never be blurred by subpixel transforms */
+.xterm-screen canvas {
+  image-rendering: pixelated;
+}
+
 /* Markdown prose styles for file preview */
 .prose-preview {
   color: #a1a1aa;

@@ -1,3 +1,23 @@
+/** Returned by /api/metrics/live — fast-changing fields only, no subprocess calls. */
+export interface LiveMetricsSnapshot {
+  cpu: {
+    percent: number;
+    loadAvg1m: number;
+    loadAvg5m: number;
+    loadAvg15m: number;
+  };
+  memory: {
+    usedBytes: number;
+    availableBytes: number;
+    percentUsed: number;
+  };
+  temperature: {
+    available: boolean;
+    value: number | null;
+  };
+  serverTime: string;
+}
+
 export interface CpuMetrics {
   percent: number;
   loadAvg1m: number;

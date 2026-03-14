@@ -226,11 +226,13 @@ export function uploadFile(
   file: File,
   targetPath: string,
   onProgress: (pct: number) => void,
+  relativePath?: string,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const form = new FormData();
     form.append("file", file);
     form.append("path", targetPath);
+    if (relativePath) form.append("relative_path", relativePath);
 
     const xhr = new XMLHttpRequest();
 

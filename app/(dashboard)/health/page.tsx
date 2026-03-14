@@ -1,9 +1,7 @@
 import { getHealth, getMetrics } from "@/lib/api";
-import { formatBytes } from "@/lib/formatters";
-import { ResourcePanel } from "@/components/health/resource-panel";
 import { ServicesPanel } from "@/components/health/services-panel";
 import { AlertBanner } from "@/components/health/alert-banner";
-import { LiveIndicator } from "@/components/ui/live-indicator";
+import { LiveMetrics } from "@/components/health/live-metrics";
 import type { ProcessInfo } from "@/types/metrics";
 import { Server, Cpu, Clock, Thermometer } from "lucide-react";
 
@@ -106,21 +104,23 @@ function ProcessTable({
 export default async function HealthPage() {
   const [health, metrics] = await Promise.all([getHealth(), getMetrics()]);
 
-  const serverTimeStr = (() => {
-    try {
-      return new Date(metrics.serverTime).toLocaleString("en-US", {
-        weekday: "short",
-        month:   "short",
-        day:     "numeric",
-        hour:    "2-digit",
-        minute:  "2-digit",
-        second:  "2-digit",
-        hour12:  false,
-      });
-    } catch {
-      return metrics.serverTime;
-    }
-  })();
+  // Extract the fast-changing snapshot for LiveMetrics initial render.
+  // The client component takes over from here and polls every 1s.
+  const liveSnapshot = {
+    cpu: {
+      percent:    metrics.cpu.percent,
+      loadAvg1m:  metrics.cpu.loadAvg1m,
+      loadAvg5m:  metrics.cpu.loadAvg5m,
+      loadAvg15m: metrics.cpu.loadAvg15m,
+    },
+    memory: {
+      usedBytes:      metrics.memory.usedBytes,
+      availableBytes: metrics.memory.availableBytes,
+      percentUsed:    metrics.memory.percentUsed,
+    },
+    temperature: metrics.temperature,
+    serverTime:  metrics.serverTime,
+  };
 
   return (
     <>
@@ -132,24 +132,13 @@ export default async function HealthPage() {
       />
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="mb-6 flex flex-col gap-3 sm:mb-10 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-        <div>
-          <h1 className="text-[20px] font-semibold tracking-tight text-zinc-50 sm:text-[22px]">
-            System Health
-          </h1>
-          <p className="mt-1 text-[12px] text-zinc-500 sm:mt-1.5 sm:text-[13px]">
-            Real-time server monitoring
-          </p>
-        </div>
-        <div className="flex flex-col items-start gap-1 sm:items-end sm:gap-1.5">
-          <LiveIndicator
-            interval={10_000}
-            serverTimestamp={new Date(metrics.serverTime).getTime()}
-          />
-          <p className="font-mono text-[11px] text-zinc-700">
-            server time · <span className="text-zinc-400">{serverTimeStr}</span>
-          </p>
-        </div>
+      <div className="mb-6 sm:mb-10">
+        <h1 className="text-[20px] font-semibold tracking-tight text-zinc-50 sm:text-[22px]">
+          System Health
+        </h1>
+        <p className="mt-1 text-[12px] text-zinc-500 sm:mt-1.5 sm:text-[13px]">
+          Real-time server monitoring
+        </p>
       </div>
 
       {/* ── System Overview ──────────────────────────────────────────────── */}
@@ -226,36 +215,13 @@ export default async function HealthPage() {
         </div>
       </div>
 
-      {/* ── Resource Usage ───────────────────────────────────────────────── */}
-      <SectionLabel>Resource Usage</SectionLabel>
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <ResourcePanel
-          title="CPU"
-          percent={metrics.cpu.percent}
-          rows={[
-            { label: "Load 1m · 5m · 15m", value: `${metrics.cpu.loadAvg1m} · ${metrics.cpu.loadAvg5m} · ${metrics.cpu.loadAvg15m}` },
-            { label: "Cores",              value: `${metrics.cpu.cores} logical` },
-          ]}
-        />
-        <ResourcePanel
-          title="Memory"
-          percent={metrics.memory.percentUsed}
-          rows={[
-            { label: "Total",     value: formatBytes(metrics.memory.totalBytes) },
-            { label: "Used",      value: formatBytes(metrics.memory.usedBytes) },
-            { label: "Available", value: formatBytes(metrics.memory.availableBytes) },
-          ]}
-        />
-        <ResourcePanel
-          title="Storage"
-          percent={metrics.disk.percentUsed}
-          rows={[
-            { label: "Total", value: formatBytes(metrics.disk.totalBytes) },
-            { label: "Used",  value: formatBytes(metrics.disk.usedBytes) },
-            { label: "Free",  value: formatBytes(metrics.disk.freeBytes) },
-          ]}
-        />
-      </div>
+      {/* ── Resource Usage (live — polls every 1s, triggers 30s router.refresh) */}
+      <LiveMetrics
+        initial={liveSnapshot}
+        storage={metrics.disk}
+        memoryTotal={metrics.memory.totalBytes}
+        cpuCores={metrics.cpu.cores}
+      />
 
       {/* ── Services (interactive: logs + restart) ────────────────────── */}
       <div className="mb-8">

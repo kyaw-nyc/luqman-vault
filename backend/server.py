@@ -574,6 +574,54 @@ def storage_tree(path: str = Query(default="/")):
     return {"path": path, "children": children}
 
 
+@app.get("/api/metrics/live")
+def get_metrics_live():
+    """
+    Lightweight 1-second polling endpoint.
+    Uses cpu_percent(interval=0) — non-blocking cached read.
+    No subprocess calls, no network probes. Typically < 5 ms.
+    """
+    cpu_pct = round(psutil.cpu_percent(interval=0), 1)
+    try:
+        load_1m, load_5m, load_15m = os.getloadavg()
+    except AttributeError:
+        load_1m = load_5m = load_15m = 0.0
+
+    mem = psutil.virtual_memory()
+
+    temp_available = False
+    temp_value: float | None = None
+    try:
+        temps = psutil.sensors_temperatures()
+        if temps:
+            all_temps = [s.current for sl in temps.values() for s in sl
+                         if s.current is not None]
+            if all_temps:
+                temp_available = True
+                temp_value = round(max(all_temps), 1)
+    except (AttributeError, Exception):
+        pass
+
+    return {
+        "cpu": {
+            "percent":    cpu_pct,
+            "loadAvg1m":  round(load_1m,  2),
+            "loadAvg5m":  round(load_5m,  2),
+            "loadAvg15m": round(load_15m, 2),
+        },
+        "memory": {
+            "usedBytes":      mem.used,
+            "availableBytes": mem.available,
+            "percentUsed":    round(mem.percent, 1),
+        },
+        "temperature": {
+            "available": temp_available,
+            "value":     temp_value,
+        },
+        "serverTime": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 @app.get("/api/metrics")
 def get_metrics():
     now = datetime.now(timezone.utc)
@@ -834,6 +882,7 @@ def download_file(path: str = Query(...), inline: bool = Query(default=False)):
 async def upload_file(
     file: UploadFile = File(...),
     path: str = Form(default="/"),
+    relative_path: str = Form(default=""),
 ):
     target_dir = resolve_safe_path(path)
     if not target_dir.exists():
@@ -841,11 +890,24 @@ async def upload_file(
     if not target_dir.is_dir():
         raise HTTPException(status_code=400, detail="Target path is not a directory")
 
-    filename = Path(file.filename or "upload").name
-    if not filename:
-        raise HTTPException(status_code=400, detail="Invalid filename")
+    if relative_path:
+        # Folder upload: relative_path is e.g. "myFolder/subdir/file.txt"
+        # Sanitize every component to prevent path traversal.
+        parts = Path(relative_path.lstrip("/")).parts
+        for part in parts:
+            if not part or part in (".", "..") or "/" in part or "\\" in part:
+                raise HTTPException(status_code=400, detail="Invalid path component")
+        dest = target_dir.joinpath(*parts).resolve()
+        if not str(dest).startswith(str(STORAGE_ROOT)):
+            raise HTTPException(status_code=400, detail="Invalid path")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        filename = Path(file.filename or "upload").name
+        if not filename:
+            raise HTTPException(status_code=400, detail="Invalid filename")
+        dest = target_dir / filename
 
-    dest = target_dir / filename
+    filename = dest.name
 
     versioned = False
     if dest.exists() and dest.is_file():
@@ -1247,19 +1309,32 @@ async def terminal_ws(ws: WebSocket):
 
     stop = asyncio.Event()
     last_activity = asyncio.get_event_loop().time()
+    loop = asyncio.get_event_loop()
+    pty_queue: asyncio.Queue[bytes | None] = asyncio.Queue()
+
+    def _on_pty_readable() -> None:
+        """Called by the event loop when PTY fd has data — zero polling latency."""
+        try:
+            # Read up to 64 KiB; large buffer handles burst output (ls -la, etc.)
+            data = os.read(fd, 65536)
+            if data:
+                pty_queue.put_nowait(data)
+            else:
+                pty_queue.put_nowait(None)  # EOF
+        except OSError:
+            pty_queue.put_nowait(None)
+
+    loop.add_reader(fd, _on_pty_readable)
 
     async def pty_to_ws():
-        """Poll PTY for output and relay to WebSocket."""
+        """Drain PTY queue and forward to WebSocket."""
         while not stop.is_set():
-            await asyncio.sleep(0.01)
+            data = await pty_queue.get()
+            if data is None:
+                break
             try:
-                if select.select([fd], [], [], 0)[0]:
-                    data = os.read(fd, 4096)
-                    if data:
-                        await ws.send_bytes(data)
-                    else:
-                        break
-            except OSError:
+                await ws.send_bytes(data)
+            except Exception:
                 break
         if not stop.is_set():
             stop.set()
@@ -1273,7 +1348,7 @@ async def terminal_ws(ws: WebSocket):
         nonlocal last_activity
         while not stop.is_set():
             await asyncio.sleep(30)
-            now = asyncio.get_event_loop().time()
+            now = loop.time()
             if now - last_activity > TERMINAL_IDLE_TIMEOUT:
                 stop.set()
                 print("[terminal] idle timeout")
@@ -1289,7 +1364,7 @@ async def terminal_ws(ws: WebSocket):
     try:
         while not stop.is_set():
             msg = await ws.receive()
-            last_activity = asyncio.get_event_loop().time()
+            last_activity = loop.time()
             if "bytes" in msg:
                 os.write(fd, msg["bytes"])
             elif "text" in msg:
@@ -1311,6 +1386,7 @@ async def terminal_ws(ws: WebSocket):
         print(f"[terminal] error: {e}")
     finally:
         stop.set()
+        loop.remove_reader(fd)
         reader.cancel()
         watchdog.cancel()
         _cleanup_pty(pid, fd)

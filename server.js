@@ -27,21 +27,46 @@ app.prepare().then(() => {
             handshakeTimeout: 5000,
           });
 
-          backendWs.on("open", () => {
-            clientWs.on("message", (data, isBinary) => {
-              if (backendWs.readyState === WebSocket.OPEN) {
-                backendWs.send(data, { binary: isBinary });
-              }
-            });
+          // Buffer client messages that arrive before the backend is open.
+          // This fixes a race where the initial resize message is dropped.
+          const pending = [];
+          let backendOpen = false;
 
-            backendWs.on("message", (data, isBinary) => {
-              if (clientWs.readyState === WebSocket.OPEN) {
-                clientWs.send(data, { binary: isBinary });
+          // Register client→backend listener immediately (not inside "open")
+          clientWs.on("message", (data, isBinary) => {
+            if (backendOpen && backendWs.readyState === WebSocket.OPEN) {
+              try { backendWs.send(data, { binary: isBinary }); } catch {}
+            } else {
+              pending.push({ data, isBinary });
+            }
+          });
+
+          // backend→client listener also registered immediately
+          backendWs.on("message", (data, isBinary) => {
+            if (clientWs.readyState === WebSocket.OPEN) {
+              try { clientWs.send(data, { binary: isBinary }); } catch {}
+            }
+          });
+
+          // Keepalive pings every 25s to prevent idle disconnects
+          const pingInterval = setInterval(() => {
+            if (backendWs.readyState === WebSocket.OPEN) {
+              try { backendWs.ping(); } catch {}
+            }
+          }, 25000);
+
+          backendWs.on("open", () => {
+            backendOpen = true;
+            // Drain buffered messages in order
+            for (const { data, isBinary } of pending.splice(0)) {
+              if (backendWs.readyState === WebSocket.OPEN) {
+                try { backendWs.send(data, { binary: isBinary }); } catch {}
               }
-            });
+            }
           });
 
           backendWs.on("close", (code, reason) => {
+            clearInterval(pingInterval);
             const c = code || 1006;
             const r = reason?.toString() || "";
             if (clientWs.readyState <= WebSocket.OPEN) {
@@ -51,16 +76,19 @@ app.prepare().then(() => {
 
           backendWs.on("error", (err) => {
             console.error("[ws-proxy] backend error:", err.message);
+            clearInterval(pingInterval);
             if (clientWs.readyState <= WebSocket.OPEN) {
               clientWs.close(4002, "Backend connection failed");
             }
           });
 
           clientWs.on("close", () => {
+            clearInterval(pingInterval);
             if (backendWs.readyState <= WebSocket.OPEN) backendWs.close();
           });
 
           clientWs.on("error", () => {
+            clearInterval(pingInterval);
             if (backendWs.readyState <= WebSocket.OPEN) backendWs.close();
           });
         });
